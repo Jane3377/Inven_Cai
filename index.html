@@ -158,8 +158,13 @@
             .hero { grid-template-columns: 1fr; position: static; }
             .header-actions { justify-content: flex-start; }
             .toolbar { grid-template-columns: 1fr; }
+            th { top: 0; }
+        }
+        @media (max-width: 680px) {
             .desktop-table { display: none; }
             .mobile-cards { display: block; }
+            .count-table-wrap { display: none; }
+            .count-cards-mobile { display: block; }
             .location-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
         @media (max-width: 560px) {
@@ -220,6 +225,19 @@
         .count-loc-unit { font-size: 13px; color: #506059; }
         .count-confirm-btn { margin-top: 12px; width: 100%; padding: 11px; border-radius: 12px; font-weight: 800; border: 0; cursor: pointer; background: var(--primary-color); color: #fff; font-size: 15px; }
         .count-confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .count-table-wrap { }
+        .count-cards-mobile { display: none; }
+        .count-input-stack { display: grid; gap: 6px; }
+        .count-input-row { display: flex; align-items: center; gap: 5px; }
+        .count-input-label { font-size: 12px; color: #6a786f; font-weight: 700; width: 38px; flex-shrink: 0; }
+        .count-table-input { width: 76px; border: 1.5px solid #cdd7d1; border-radius: 8px; padding: 6px 8px; font-size: 14px; background: #fff; }
+        .count-table-input:focus { border-color: var(--primary-color); outline: none; }
+        .count-input-unit { font-size: 12px; color: #8a9690; white-space: nowrap; }
+        .count-table-confirm-btn { padding: 8px 14px; border: 0; border-radius: 10px; background: var(--primary-color); color: #fff; font-weight: 800; cursor: pointer; font-size: 13px; white-space: nowrap; }
+        tr.count-dirty td { background: #fffdf0 !important; }
+        tr.count-dirty .count-table-confirm-btn { background: #f59e0b; }
+        tr.count-confirmed td { background: #f4fbf4 !important; }
+        tr.count-confirmed .count-table-confirm-btn { background: #43a047; }
         /* === Desktop inline action panel === */
         .desk-act-col { display: flex; flex-direction: column; gap: 5px; }
         .desk-act-col .card-act-btn { padding: 6px 8px; font-size: 12px; border-radius: 8px; }
@@ -1259,42 +1277,81 @@ const firebaseConfig = {
         document.getElementById("countPinInput").value = "";
     };
 
+    function renderCountLocInputs(item, keys) {
+        const allowed = item.allowedLocations || [];
+        const filtered = keys.filter(k => allowed.includes(k));
+        if (!filtered.length) return '<div style="color:#ccc;font-size:12px;text-align:center;">—</div>';
+        return `<div class="count-input-stack">${filtered.map(key => {
+            const currentDisplay = toDisplayQty(item, normalizeNumber(item.locations?.[key], 0));
+            return `<div class="count-input-row">
+                <span class="count-input-label">${LOCATION_DEFS[key].short}</span>
+                <input class="count-table-input" type="number" min="0" step="any" inputmode="decimal"
+                    id="count-t-${item.id}-${key}" value="${currentDisplay}" oninput="markCountDirty(${item.id})">
+                <span class="count-input-unit">${escapeHtml(item.displayUnit)}</span>
+            </div>`;
+        }).join("")}</div>`;
+    }
+
     function renderCountItems() {
         const container = document.getElementById("countItems");
         if (!container) return;
         const items = inventoryData.filter(i => i.active !== false);
         if (!items.length) { container.innerHTML = '<div class="loading-text">沒有可盤點的品項</div>'; return; }
-        container.innerHTML = items.map(item => {
+
+        const tableRows = items.map(item => `
+            <tr id="count-tr-${item.id}">
+                <td><span class="badge badge-muted">${escapeHtml(item.category)}</span></td>
+                <td class="name-cell"><strong>${escapeHtml(item.name)}</strong><div class="help">${escapeHtml(item.basePerDisplay)} ${escapeHtml(item.baseUnit)} = 1 ${escapeHtml(item.displayUnit)}</div></td>
+                <td>${renderCountLocInputs(item, WAREHOUSE_KEYS)}</td>
+                <td>${renderCountLocInputs(item, ["prep"])}</td>
+                <td>${renderCountLocInputs(item, ONSITE_KEYS)}</td>
+                <td><button class="count-table-confirm-btn" type="button" onclick="submitItemCount(${item.id})">✓ 確認</button></td>
+            </tr>`).join("");
+
+        const cards = items.map(item => {
             const locRows = (item.allowedLocations || []).map(key => {
-                const def = LOCATION_DEFS[key];
-                const currentBase = normalizeNumber(item.locations?.[key], 0);
-                const currentDisplay = toDisplayQty(item, currentBase);
+                const currentDisplay = toDisplayQty(item, normalizeNumber(item.locations?.[key], 0));
                 return `<div class="count-loc-row">
-                    <span class="count-loc-name">${def?.short || key}</span>
+                    <span class="count-loc-name">${LOCATION_DEFS[key].short}</span>
                     <span class="count-loc-current">現：${currentDisplay} ${escapeHtml(item.displayUnit)}</span>
                     <input class="count-loc-input" type="number" min="0" step="any" inputmode="decimal"
-                        id="count-${item.id}-${key}" value="${currentDisplay}"
-                        oninput="markCountDirty(${item.id})">
+                        id="count-c-${item.id}-${key}" value="${currentDisplay}" oninput="markCountDirty(${item.id})">
                     <span class="count-loc-unit">${escapeHtml(item.displayUnit)}</span>
                 </div>`;
             }).join("");
             return `<div class="count-card" id="count-card-${item.id}">
                 <div class="count-card-head">
-                    <div>
-                        <div class="count-card-title">${escapeHtml(item.name)}</div>
-                        <div style="font-size:12px;color:#8a9690;margin-top:2px;">${escapeHtml(item.category)}｜以 ${escapeHtml(item.displayUnit)} 為單位輸入</div>
-                    </div>
+                    <div><div class="count-card-title">${escapeHtml(item.name)}</div>
+                    <div style="font-size:12px;color:#8a9690;margin-top:2px;">${escapeHtml(item.category)}｜以 ${escapeHtml(item.displayUnit)} 為單位輸入</div></div>
                     <span class="badge badge-muted">${escapeHtml(item.category)}</span>
                 </div>
                 ${locRows}
                 <button class="count-confirm-btn" type="button" onclick="submitItemCount(${item.id})">✓ 確認此品項</button>
             </div>`;
         }).join("");
+
+        container.innerHTML = `
+            <div class="count-table-wrap">
+                <table>
+                    <thead><tr>
+                        <th style="width:8%">類別</th>
+                        <th style="text-align:left;width:20%">食材 / 物品</th>
+                        <th style="width:22%">大倉區</th>
+                        <th style="width:15%">備貨區</th>
+                        <th style="width:20%">現場區</th>
+                        <th style="width:15%">確認</th>
+                    </tr></thead>
+                    <tbody>${tableRows}</tbody>
+                </table>
+            </div>
+            <div class="count-cards-mobile count-items-grid">${cards}</div>`;
     }
 
     window.markCountDirty = function(itemId) {
         const card = document.getElementById(`count-card-${itemId}`);
         if (card) { card.classList.add("count-dirty"); card.classList.remove("count-confirmed"); }
+        const tr = document.getElementById(`count-tr-${itemId}`);
+        if (tr) { tr.classList.add("count-dirty"); tr.classList.remove("count-confirmed"); }
     };
 
     window.submitItemCount = function(itemId) {
@@ -1302,9 +1359,11 @@ const firebaseConfig = {
         const item = inventoryData.find(i => String(i.id) === String(itemId));
         if (!item) return;
         const allowed = item.allowedLocations || [];
+        const useTable = window.innerWidth > 680;
+        const prefix = useTable ? `count-t-${itemId}-` : `count-c-${itemId}-`;
         const newVals = {};
         for (const key of allowed) {
-            const raw = document.getElementById(`count-${itemId}-${key}`)?.value ?? "";
+            const raw = document.getElementById(`${prefix}${key}`)?.value ?? "";
             const n = normalizeNumber(raw, NaN);
             if (!Number.isFinite(n) || n < 0) {
                 alert(`【${LOCATION_DEFS[key]?.name || key}】數量無效，請輸入 0 或正數。`);
@@ -1332,6 +1391,8 @@ const firebaseConfig = {
         }).then(() => {
             const card = document.getElementById(`count-card-${itemId}`);
             if (card) { card.classList.remove("count-dirty"); card.classList.add("count-confirmed"); }
+            const tr = document.getElementById(`count-tr-${itemId}`);
+            if (tr) { tr.classList.remove("count-dirty"); tr.classList.add("count-confirmed"); }
         });
     };
 
