@@ -165,21 +165,43 @@
     <!-- 系統設定 -->
     <div id="tab-settings" class="tab-content">
         <div class="section-header"><h2>系統設定</h2></div>
-        <div class="settings-card">
-            <h3>修改 PIN 碼</h3>
-            <div class="form-group">
-                <label>目前 PIN 碼</label>
-                <input type="password" id="currentPin" maxlength="4" inputmode="numeric" placeholder="輸入目前 PIN">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;">
+            <div class="settings-card">
+                <h3>修改管理後台 PIN 碼</h3>
+                <div class="form-group">
+                    <label>目前 PIN 碼</label>
+                    <input type="password" id="currentPin" maxlength="4" inputmode="numeric" placeholder="輸入目前 PIN">
+                </div>
+                <div class="form-group">
+                    <label>新 PIN 碼（4 位數字）</label>
+                    <input type="password" id="newPin" maxlength="4" inputmode="numeric" placeholder="輸入新 PIN">
+                </div>
+                <div class="form-group">
+                    <label>確認新 PIN 碼</label>
+                    <input type="password" id="confirmPin" maxlength="4" inputmode="numeric" placeholder="再次輸入新 PIN">
+                </div>
+                <button class="btn btn-primary" onclick="changePin()">確認修改</button>
             </div>
-            <div class="form-group">
-                <label>新 PIN 碼（4 位數字）</label>
-                <input type="password" id="newPin" maxlength="4" inputmode="numeric" placeholder="輸入新 PIN">
+            <div class="settings-card">
+                <h3>盤點 PIN 碼</h3>
+                <p style="font-size:13px;color:#666;margin-bottom:12px;">員工在庫存頁籤進入「盤點」時須輸入此 PIN 碼。</p>
+                <div class="form-group">
+                    <label>目前狀態</label>
+                    <div id="countPinDisplay" style="font-size:14px;color:#555;padding:6px 0;">（載入中）</div>
+                </div>
+                <div class="form-group">
+                    <label>新盤點 PIN 碼（4 位數字）</label>
+                    <input type="password" id="newCountPin" maxlength="4" inputmode="numeric" placeholder="輸入新盤點 PIN">
+                </div>
+                <div class="form-group">
+                    <label>確認盤點 PIN 碼</label>
+                    <input type="password" id="confirmCountPin" maxlength="4" inputmode="numeric" placeholder="再次輸入">
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <button class="btn btn-primary" onclick="changeCountPin()">儲存盤點 PIN</button>
+                    <button class="btn btn-outline" onclick="clearCountPin()">清除</button>
+                </div>
             </div>
-            <div class="form-group">
-                <label>確認新 PIN 碼</label>
-                <input type="password" id="confirmPin" maxlength="4" inputmode="numeric" placeholder="再次輸入新 PIN">
-            </div>
-            <button class="btn btn-primary" onclick="changePin()">確認修改</button>
         </div>
     </div>
 </div>
@@ -234,18 +256,22 @@
             </div>
         </div>
 
-        <div class="form-row">
+        <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
             <div class="form-group">
                 <label>入庫庫位（進貨存入）</label>
                 <select id="editReceive"></select>
             </div>
             <div class="form-group">
-                <label>移倉目標（大倉移至現場）</label>
+                <label>移倉目標（大倉→現場）</label>
                 <select id="editIssue"></select>
             </div>
             <div class="form-group">
-                <label>消耗庫位（消耗從哪扣）</label>
+                <label>消耗庫位（從哪扣）</label>
                 <select id="editConsume"></select>
+            </div>
+            <div class="form-group">
+                <label>回放目標（備貨回倉）</label>
+                <select id="editReturn"></select>
             </div>
         </div>
 
@@ -309,15 +335,16 @@
         onsiteRoom:       { name: "現場常溫",  short: "現場常溫" }
     };
     const STORAGE_PRESETS = {
-        冷凍: { receive: "warehouseFrozen",  issue: "onsiteChilled", consume: "prep", allowed: ["warehouseFrozen", "prep", "onsiteChilled"] },
-        冷藏: { receive: "warehouseChilled", issue: "onsiteChilled", consume: "prep", allowed: ["warehouseChilled", "prep", "onsiteChilled"] },
-        常溫: { receive: "warehouseRoom",    issue: "onsiteRoom",    consume: "warehouseRoom", allowed: ["warehouseRoom", "onsiteRoom"] }
+        冷凍: { receive: "warehouseFrozen",  issue: "onsiteChilled", consume: "prep",       return: "warehouseFrozen",  allowed: ["warehouseFrozen", "prep", "onsiteChilled"] },
+        冷藏: { receive: "warehouseChilled", issue: "onsiteChilled", consume: "prep",       return: "warehouseChilled", allowed: ["warehouseChilled", "prep", "onsiteChilled"] },
+        常溫: { receive: "warehouseRoom",    issue: "onsiteRoom",    consume: "onsiteRoom", return: "warehouseRoom",    allowed: ["warehouseRoom", "onsiteRoom"] }
     };
     const DEFAULT_CATEGORIES = ['肉類','海鮮','臘腸','薯條起司','蔬菜','罐頭類','飲料','粉','醬料','外帶醬料','包材','衛生用品','清潔用品'];
 
     let inventoryData = [];
     let categories    = [...DEFAULT_CATEGORIES];
     let adminPin      = "1234";
+    let countPin      = "";
 
     // ── Helpers ─────────────────────────────────────────
     function nn(v, fb = 0) { const n = Number(v); return Number.isFinite(n) ? n : fb; }
@@ -346,6 +373,7 @@
             defaultReceiveLocation:  item.defaultReceiveLocation  || preset.receive,
             defaultIssueLocation:    item.defaultIssueLocation    || preset.issue,
             defaultConsumeLocation:  item.defaultConsumeLocation  || preset.consume || "prep",
+            defaultReturnLocation:   item.defaultReturnLocation   || preset.return  || preset.receive,
             active: item.active !== false,
             sortOrder: nn(item.sortOrder, idx),
             ...item,
@@ -369,8 +397,11 @@
             const data = snap.data();
             categories = data.categories || DEFAULT_CATEGORIES;
             adminPin   = data.adminPin   || "1234";
+            countPin   = data.countPin   || "";
         }
         renderCategories();
+        const cpDisplay = document.getElementById('countPinDisplay');
+        if (cpDisplay) cpDisplay.textContent = countPin ? `目前：${countPin.replace(/./g, '●')}` : '（尚未設定）';
     });
 
     async function runItemTransaction(mutate) {
@@ -517,9 +548,11 @@
         document.getElementById('editReceive').innerHTML = locOpts;
         document.getElementById('editIssue').innerHTML   = locOpts;
         document.getElementById('editConsume').innerHTML = locOpts;
+        document.getElementById('editReturn').innerHTML  = locOpts;
         document.getElementById('editReceive').value = item?.defaultReceiveLocation  ?? 'warehouseFrozen';
         document.getElementById('editIssue').value   = item?.defaultIssueLocation    ?? 'onsiteChilled';
         document.getElementById('editConsume').value = item?.defaultConsumeLocation  ?? 'prep';
+        document.getElementById('editReturn').value  = item?.defaultReturnLocation   ?? item?.defaultReceiveLocation ?? 'warehouseFrozen';
 
         const allowed = new Set(item?.allowedLocations ?? ['warehouseFrozen', 'prep']);
         document.getElementById('editAllowed').innerHTML = buildAllowedCheckboxes(allowed);
@@ -533,6 +566,7 @@
         document.getElementById('editReceive').value = preset.receive;
         document.getElementById('editIssue').value   = preset.issue;
         document.getElementById('editConsume').value = preset.consume || 'prep';
+        document.getElementById('editReturn').value  = preset.return  || preset.receive;
         document.querySelectorAll('#editAllowed input[type="checkbox"]').forEach(cb => {
             cb.checked = preset.allowed.includes(cb.value);
         });
@@ -556,6 +590,7 @@
         const defaultReceive  = document.getElementById('editReceive').value;
         const defaultIssue    = document.getElementById('editIssue').value;
         const defaultConsume  = document.getElementById('editConsume').value;
+        const defaultReturn   = document.getElementById('editReturn').value;
         const allowedLocations = [...document.querySelectorAll('#editAllowed input:checked')].map(el => el.value);
 
         if (!name || !category || !displayUnit || !baseUnit) {
@@ -571,6 +606,7 @@
             defaultReceiveLocation:  defaultReceive,
             defaultIssueLocation:    defaultIssue,
             defaultConsumeLocation:  defaultConsume,
+            defaultReturnLocation:   defaultReturn,
             allowedLocations, sortOrder, active
         };
 
@@ -610,9 +646,30 @@
         setDoc(settingsRef, { categories, adminPin: newP }, { merge: true })
             .then(() => {
                 adminPin = newP;
-                showToast('✅ PIN 已更新');
+                showToast('✅ 管理 PIN 已更新');
                 ['currentPin', 'newPin', 'confirmPin'].forEach(id => { document.getElementById(id).value = ''; });
             })
+            .catch(e => alert('儲存失敗：' + e.message));
+    };
+
+    window.changeCountPin = function() {
+        const newP  = document.getElementById('newCountPin').value;
+        const confP = document.getElementById('confirmCountPin').value;
+        if (!/^\d{4}$/.test(newP)) { alert('盤點 PIN 碼必須是 4 位數字'); return; }
+        if (newP !== confP) { alert('兩次輸入不一致'); return; }
+        setDoc(settingsRef, { countPin: newP }, { merge: true })
+            .then(() => {
+                countPin = newP;
+                showToast('✅ 盤點 PIN 已更新');
+                ['newCountPin', 'confirmCountPin'].forEach(id => { document.getElementById(id).value = ''; });
+            })
+            .catch(e => alert('儲存失敗：' + e.message));
+    };
+
+    window.clearCountPin = function() {
+        if (!confirm('確定要清除盤點 PIN 碼嗎？清除後盤點功能將無法使用。')) return;
+        setDoc(settingsRef, { countPin: "" }, { merge: true })
+            .then(() => { countPin = ""; showToast('✅ 盤點 PIN 已清除'); })
             .catch(e => alert('儲存失敗：' + e.message));
     };
 
