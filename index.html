@@ -200,6 +200,13 @@
         .loc-chips label:has(input:checked) .loc-sub { color: var(--transfer-color); }
         .panel-note { width: 100%; border: 1px solid #cdd7d1; border-radius: 10px; padding: 9px 12px; font-size: 14px; margin-bottom: 10px; background: #fff; }
         .panel-submit { width: 100%; padding: 13px; border-radius: 12px; font-size: 16px; font-weight: 800; border: 0; cursor: pointer; }
+
+        /* === Desktop inline action panel === */
+        .desk-act-col { display: flex; flex-direction: column; gap: 5px; }
+        .desk-act-col .card-act-btn { padding: 6px 8px; font-size: 12px; border-radius: 8px; }
+        .desk-panel-cell { padding: 0 !important; border-bottom: 2px solid #d8e5dc !important; }
+        .desk-panel-inner { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 16px; background: #f7faf8; }
+        .desk-note { border: 1px solid #cdd7d1; border-radius: 10px; padding: 9px 12px; font-size: 14px; background: #fff; flex: 1; min-width: 100px; }
     </style>
 </head>
 <body>
@@ -727,6 +734,15 @@ const firebaseConfig = {
             return;
         }
         tbody.innerHTML = items.map(renderTableRow).join("");
+        Object.entries(deskPanelState).forEach(([itemId, type]) => {
+            if (!type) return;
+            const item = inventoryData.find(i => String(i.id) === String(itemId));
+            if (!item) return;
+            document.getElementById(`desk-btn-${type}-${itemId}`)?.classList.add("active");
+            const panelRow = document.getElementById(`desk-panel-tr-${itemId}`);
+            const panelCell = document.getElementById(`desk-panel-td-${itemId}`);
+            if (panelRow && panelCell) { panelCell.innerHTML = renderDeskPanel(item, type); panelRow.classList.remove("hidden"); }
+        });
         mobile.innerHTML = items.map(renderMobileCard).join("");
         Object.entries(cardPanelState).forEach(([itemId, type]) => {
             if (!type) return;
@@ -741,9 +757,8 @@ const firebaseConfig = {
 
     function renderTableRow(item) {
         const warehouseBase = sumLocations(item, WAREHOUSE_KEYS);
-        const prepBase = normalizeNumber(item.locations?.prep, 0);
-        const onsiteBase = sumLocations(item, ONSITE_KEYS);
         const isLow = item.active !== false && warehouseBase <= item.thresholdBase;
+        const dis = item.active === false ? "disabled" : "";
         return `
             <tr class="${isLow ? "low-stock" : ""} ${item.active === false ? "inactive-row" : ""}">
                 <td><span class="badge badge-muted">${escapeHtml(item.category)}</span></td>
@@ -753,7 +768,16 @@ const firebaseConfig = {
                 <td>${renderLocationStack(item, ONSITE_KEYS)}</td>
                 <td><strong>${formatQty(item, item.thresholdBase, { compact: true })}</strong></td>
                 <td>${item.active === false ? '<span class="badge badge-off">停用</span>' : isLow ? '<span class="badge badge-low">⚠️ 補貨</span>' : '<span class="badge badge-ok">✅ 充足</span>'}</td>
-                <td><button class="btn btn-primary btn-small" type="button" onclick="openActionModal(${item.id})">操作</button></td>
+                <td>
+                    <div class="desk-act-col">
+                        <button class="card-act-btn act-consume" id="desk-btn-consume-${item.id}" type="button" ${dis} onclick="toggleDeskAction(${item.id},'consume')">消耗</button>
+                        <button class="card-act-btn act-receive" id="desk-btn-receive-${item.id}" type="button" ${dis} onclick="toggleDeskAction(${item.id},'receive')">入庫</button>
+                        <button class="card-act-btn act-move" id="desk-btn-move-${item.id}" type="button" ${dis} onclick="toggleDeskAction(${item.id},'move')">移倉</button>
+                    </div>
+                </td>
+            </tr>
+            <tr class="hidden" id="desk-panel-tr-${item.id}">
+                <td class="desk-panel-cell" colspan="8" id="desk-panel-td-${item.id}"></td>
             </tr>`;
     }
 
@@ -784,6 +808,119 @@ const firebaseConfig = {
                 <div class="card-panel hidden" id="card-panel-${item.id}"></div>
             </article>`;
     }
+
+    const deskPanelState = {};
+
+    window.toggleDeskAction = function(itemId, type) {
+        if (!guardOnline()) return;
+        const item = inventoryData.find(i => String(i.id) === String(itemId));
+        if (!item) return;
+        const panelRow = document.getElementById(`desk-panel-tr-${itemId}`);
+        const panelCell = document.getElementById(`desk-panel-td-${itemId}`);
+        if (!panelRow || !panelCell) return;
+        const current = deskPanelState[itemId];
+        ["consume", "receive", "move"].forEach(t => document.getElementById(`desk-btn-${t}-${itemId}`)?.classList.remove("active"));
+        if (current === type) {
+            deskPanelState[itemId] = null;
+            panelRow.classList.add("hidden");
+            panelCell.innerHTML = "";
+            return;
+        }
+        deskPanelState[itemId] = type;
+        document.getElementById(`desk-btn-${type}-${itemId}`)?.classList.add("active");
+        panelCell.innerHTML = renderDeskPanel(item, type);
+        panelRow.classList.remove("hidden");
+        panelCell.querySelector(".panel-qty-input")?.focus();
+    };
+
+    function renderDeskPanel(item, type) {
+        const hasBase = item.allowBaseInput && item.baseUnit !== item.displayUnit;
+        const unitChips = [item.displayUnit, ...(hasBase ? [item.baseUnit] : [])].map((u, i) =>
+            `<label><input type="radio" name="desk-unit-${item.id}" value="${escapeHtml(u)}" ${i === 0 ? "checked" : ""}>${escapeHtml(u)}</label>`
+        ).join("");
+        const qtyAndSuffix = `
+            <div class="unit-chips">${unitChips}</div>
+            <input class="panel-input panel-qty-input" id="desk-qty-${item.id}" type="number" min="0" step="any" inputmode="decimal" placeholder="數量" style="width:110px;flex:none;">
+            <input class="desk-note" type="text" id="desk-note-${item.id}" placeholder="備註（選填）">`;
+
+        if (type === "receive") {
+            const loc = LOCATION_DEFS[item.defaultReceiveLocation];
+            return `<div class="desk-panel-inner">
+                <span class="panel-label">入庫至</span><span class="panel-loc-info" style="background:#e8f5e9;color:#2e7d32;">${loc?.name || item.defaultReceiveLocation}</span>
+                <span class="panel-label">數量</span>${qtyAndSuffix}
+                <button class="panel-submit" type="button" style="background:#2e7d32;color:#fff;width:auto;padding:10px 20px;white-space:nowrap;" onclick="submitDeskAction(${item.id},'receive')">✅ 確認入庫</button>
+            </div>`;
+        }
+        if (type === "consume") {
+            const loc = LOCATION_DEFS[item.defaultIssueLocation];
+            return `<div class="desk-panel-inner">
+                <span class="panel-label">從</span><span class="panel-loc-info" style="background:#ffebee;color:#c62828;">${loc?.name || item.defaultIssueLocation}</span>
+                <span class="panel-label">數量</span>${qtyAndSuffix}
+                <button class="panel-submit" type="button" style="background:#c62828;color:#fff;width:auto;padding:10px 20px;white-space:nowrap;" onclick="submitDeskAction(${item.id},'consume')">📤 確認消耗</button>
+            </div>`;
+        }
+        if (type === "move") {
+            const allowed = item.allowedLocations || [];
+            const locChips = (radioName, defaultVal) => allowed.map(key => {
+                const def = LOCATION_DEFS[key];
+                const qty = formatQty(item, normalizeNumber(item.locations?.[key], 0), { compact: true });
+                return `<label><input type="radio" name="${radioName}" value="${key}" ${key === defaultVal ? "checked" : ""}><span>${def?.short || key}</span><span class="loc-sub">${qty}</span></label>`;
+            }).join("");
+            return `<div class="desk-panel-inner">
+                <span class="panel-label">從</span><div class="loc-chips">${locChips(`desk-from-${item.id}`, item.defaultReceiveLocation)}</div>
+                <span style="color:#aaa;font-size:18px;flex:none;">→</span>
+                <span class="panel-label">移至</span><div class="loc-chips">${locChips(`desk-to-${item.id}`, item.defaultIssueLocation)}</div>
+                <span class="panel-label">數量</span>${qtyAndSuffix}
+                <button class="panel-submit" type="button" style="background:#0288d1;color:#fff;width:auto;padding:10px 20px;white-space:nowrap;" onclick="submitDeskAction(${item.id},'move')">🔄 確認移倉</button>
+            </div>`;
+        }
+        return "";
+    }
+
+    window.submitDeskAction = function(itemId, type) {
+        if (!guardOnline()) return;
+        const item = inventoryData.find(i => String(i.id) === String(itemId));
+        if (!item) return;
+        const qtyVal = document.getElementById(`desk-qty-${itemId}`)?.value;
+        const noteVal = document.getElementById(`desk-note-${itemId}`)?.value.trim() || "";
+        const unit = document.querySelector(`input[name="desk-unit-${itemId}"]:checked`)?.value || item.displayUnit;
+        const fromLoc = type === "move"
+            ? (document.querySelector(`input[name="desk-from-${itemId}"]:checked`)?.value || item.defaultReceiveLocation)
+            : item.defaultIssueLocation;
+        const toLoc = type === "move"
+            ? (document.querySelector(`input[name="desk-to-${itemId}"]:checked`)?.value || item.defaultIssueLocation)
+            : item.defaultReceiveLocation;
+
+        runStockTransaction((items, txLogs) => {
+            const it = items.find(i => String(i.id) === String(itemId));
+            if (!it) { alert("找不到此品項，請重新整理。"); return false; }
+            const baseQty = roundQty(qtyToBase(it, qtyVal, unit));
+            if (!Number.isFinite(baseQty) || baseQty <= 0) { alert("請輸入大於 0 的數量。"); return false; }
+            const qtyText = formatQty(it, baseQty);
+            const noteText = noteVal ? `｜${noteVal}` : "";
+            if (type === "receive") {
+                it.locations[toLoc] = roundQty(normalizeNumber(it.locations[toLoc], 0) + baseQty);
+                pushLog(txLogs, `📦 進貨入庫：【${it.name}】${LOCATION_DEFS[toLoc].name} +${qtyText}${noteText}`, { itemId: it.id, actionType: type, baseQty, toLocation: toLoc });
+            } else if (type === "consume") {
+                if (normalizeNumber(it.locations[fromLoc], 0) < baseQty) { alert(`${LOCATION_DEFS[fromLoc].name} 存量不足。`); return false; }
+                it.locations[fromLoc] = roundQty(it.locations[fromLoc] - baseQty);
+                pushLog(txLogs, `📤 現場消耗：【${it.name}】${LOCATION_DEFS[fromLoc].name} -${qtyText}${noteText}`, { itemId: it.id, actionType: type, baseQty, fromLocation: fromLoc });
+            } else if (type === "move") {
+                if (fromLoc === toLoc) { alert("來源與目的庫位不能相同。"); return false; }
+                if (normalizeNumber(it.locations[fromLoc], 0) < baseQty) { alert(`${LOCATION_DEFS[fromLoc].name} 存量不足。`); return false; }
+                it.locations[fromLoc] = roundQty(it.locations[fromLoc] - baseQty);
+                it.locations[toLoc] = roundQty(normalizeNumber(it.locations[toLoc], 0) + baseQty);
+                pushLog(txLogs, `🔄 移倉：【${it.name}】${LOCATION_DEFS[fromLoc].name} → ${LOCATION_DEFS[toLoc].name}，${qtyText}${noteText}`, { itemId: it.id, actionType: type, baseQty, fromLocation: fromLoc, toLocation: toLoc });
+            }
+        }).then(() => {
+            deskPanelState[itemId] = null;
+            ["consume", "receive", "move"].forEach(t => document.getElementById(`desk-btn-${t}-${itemId}`)?.classList.remove("active"));
+            const panelRow = document.getElementById(`desk-panel-tr-${itemId}`);
+            const panelCell = document.getElementById(`desk-panel-td-${itemId}`);
+            if (panelRow) panelRow.classList.add("hidden");
+            if (panelCell) panelCell.innerHTML = "";
+        });
+    };
 
     const cardPanelState = {};
 
