@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理後台 - 蔡叔叔比薩屋</title>
+    <style>
+        :root { --primary: #2e7d32; --danger: #c62828; --bg: #f4f6f8; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg); min-height: 100vh; }
+
+        /* PIN Screen */
+        #pinScreen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; gap: 16px; }
+        #pinScreen h1 { font-size: 22px; color: #333; }
+        #pinScreen p { color: #666; font-size: 14px; }
+        .pin-input { padding: 12px 20px; font-size: 24px; letter-spacing: 8px; border: 2px solid #ccc; border-radius: 8px; text-align: center; width: 180px; outline: none; }
+        .pin-input:focus { border-color: var(--primary); }
+        .pin-error { color: var(--danger); font-size: 14px; min-height: 20px; }
+
+        /* Admin Layout */
+        #adminPanel { display: none; }
+        .admin-header { background: #1b5e20; color: white; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .admin-header h1 { font-size: 18px; }
+
+        /* Buttons */
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold; transition: opacity 0.15s; text-decoration: none; display: inline-block; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-outline { background: white; border: 1px solid #ccc; color: #333; }
+        .btn-sm { padding: 4px 10px; font-size: 13px; }
+
+        /* Tabs */
+        .tabs { background: white; border-bottom: 2px solid #e0e0e0; display: flex; overflow-x: auto; }
+        .tab { padding: 12px 20px; cursor: pointer; font-size: 14px; border-bottom: 3px solid transparent; color: #666; white-space: nowrap; user-select: none; }
+        .tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: bold; }
+
+        /* Tab Content */
+        .tab-content { display: none; padding: 20px; max-width: 1200px; margin: auto; }
+        .tab-content.active { display: block; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        .section-header h2 { font-size: 18px; color: #333; }
+
+        /* Table */
+        .table-wrap { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th { background: #f5f5f5; padding: 10px 12px; text-align: left; font-weight: bold; color: #555; white-space: nowrap; }
+        td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        .badge { padding: 2px 8px; border-radius: 20px; font-size: 12px; }
+        .badge-on { background: #e8f5e9; color: #2e7d32; }
+        .badge-off { background: #f5f5f5; color: #999; }
+        .inactive-row td { opacity: 0.5; }
+        .action-cell { display: flex; gap: 6px; flex-wrap: wrap; }
+
+        /* Modal */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
+        .modal-overlay.open { display: flex; }
+        .modal { background: white; border-radius: 12px; padding: 24px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; }
+        .modal h2 { margin-bottom: 16px; font-size: 18px; color: #333; }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 13px; color: #555; margin-bottom: 4px; font-weight: bold; }
+        .form-group input, .form-group select { width: 100%; padding: 9px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; font-family: inherit; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        @media (max-width: 500px) { .form-row { grid-template-columns: 1fr; } }
+        .help-text { font-size: 12px; color: #999; margin-top: 3px; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; border-top: 1px solid #eee; padding-top: 16px; }
+        .checkbox-group { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 4px; }
+        .checkbox-group label { display: flex; align-items: center; gap: 4px; font-weight: normal; cursor: pointer; font-size: 14px; }
+
+        /* Category */
+        .card-list { background: white; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+        .card-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+        .card-item:last-child { border-bottom: none; }
+        .add-row { display: flex; gap: 8px; padding: 12px; background: white; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-top: 12px; }
+        .add-row input { flex: 1; padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; font-family: inherit; }
+        .add-row input:focus { outline: none; border-color: var(--primary); }
+
+        /* Settings */
+        .settings-card { background: white; border-radius: 8px; padding: 20px; max-width: 400px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+        .settings-card h3 { margin-bottom: 14px; font-size: 16px; color: #333; }
+
+        /* Toast */
+        #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; display: none; z-index: 200; pointer-events: none; white-space: nowrap; }
+    </style>
+</head>
+<body>
+
+<!-- PIN Screen -->
+<div id="pinScreen">
+    <h1>🍕 蔡叔叔比薩屋</h1>
+    <p>管理後台 — 請輸入 PIN 碼</p>
+    <input type="password" class="pin-input" id="pinInput" maxlength="4" inputmode="numeric" placeholder="••••" autofocus>
+    <div class="pin-error" id="pinError"></div>
+    <button class="btn btn-primary" onclick="checkPin()">進入後台</button>
+</div>
+
+<!-- Admin Panel -->
+<div id="adminPanel">
+    <div class="admin-header">
+        <h1>⚙️ 管理後台</h1>
+        <div style="display:flex;gap:8px;align-items:center;">
+            <a href="index.html" class="btn btn-outline btn-sm">← 員工頁</a>
+            <button class="btn btn-outline btn-sm" onclick="logout()">登出</button>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" data-tab="items" onclick="switchTab('items')">品項管理</div>
+        <div class="tab" data-tab="categories" onclick="switchTab('categories')">分類管理</div>
+        <div class="tab" data-tab="settings" onclick="switchTab('settings')">系統設定</div>
+    </div>
+
+    <!-- 品項管理 -->
+    <div id="tab-items" class="tab-content active">
+        <div class="section-header">
+            <h2>品項管理</h2>
+            <button class="btn btn-primary btn-sm" onclick="openItemEditor()">＋ 新增品項</button>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>排序</th>
+                        <th>品項</th>
+                        <th>單位換算</th>
+                        <th>安全線</th>
+                        <th>預設入庫</th>
+                        <th>狀態</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="itemsBody">
+                    <tr><td colspan="7" style="text-align:center;color:#999;padding:20px;">載入中…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 分類管理 -->
+    <div id="tab-categories" class="tab-content">
+        <div class="section-header">
+            <h2>分類管理</h2>
+        </div>
+        <div class="card-list" id="categoryList"></div>
+        <div class="add-row">
+            <input type="text" id="newCatInput" placeholder="新分類名稱" onkeydown="if(event.key==='Enter')addCategory()">
+            <button class="btn btn-primary btn-sm" onclick="addCategory()">新增</button>
+        </div>
+    </div>
+
+    <!-- 系統設定 -->
+    <div id="tab-settings" class="tab-content">
+        <div class="section-header"><h2>系統設定</h2></div>
+        <div class="settings-card">
+            <h3>修改 PIN 碼</h3>
+            <div class="form-group">
+                <label>目前 PIN 碼</label>
+                <input type="password" id="currentPin" maxlength="4" inputmode="numeric" placeholder="輸入目前 PIN">
+            </div>
+            <div class="form-group">
+                <label>新 PIN 碼（4 位數字）</label>
+                <input type="password" id="newPin" maxlength="4" inputmode="numeric" placeholder="輸入新 PIN">
+            </div>
+            <div class="form-group">
+                <label>確認新 PIN 碼</label>
+                <input type="password" id="confirmPin" maxlength="4" inputmode="numeric" placeholder="再次輸入新 PIN">
+            </div>
+            <button class="btn btn-primary" onclick="changePin()">確認修改</button>
+        </div>
+    </div>
+</div>
+
+<!-- Item Modal -->
+<div class="modal-overlay" id="itemModal">
+    <div class="modal">
+        <h2 id="itemModalTitle">新增品項</h2>
+        <input type="hidden" id="editItemId">
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>品項名稱 *</label>
+                <input type="text" id="editName" placeholder="例：豬絞肉（熟）">
+            </div>
+            <div class="form-group">
+                <label>分類 *</label>
+                <input type="text" id="editCategory" list="categoryDatalist" placeholder="例：肉類">
+                <datalist id="categoryDatalist"></datalist>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>儲存類型（快速套入庫位預設）</label>
+            <select id="editStorageType" onchange="onStorageTypeChange()">
+                <option value="冷凍">❄️ 冷凍</option>
+                <option value="冷藏">🧊 冷藏</option>
+                <option value="常溫">📦 常溫</option>
+            </select>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>顯示單位 *</label>
+                <input type="text" id="editDisplayUnit" placeholder="例：包、桶、盒、顆">
+            </div>
+            <div class="form-group">
+                <label>基準單位 *</label>
+                <input type="text" id="editBaseUnit" placeholder="同顯示單位則填一樣">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>換算（幾基準單位 = 1 顯示單位）</label>
+                <input type="number" id="editBasePerDisplay" min="0.0001" step="any" placeholder="不換算填 1">
+                <div class="help-text">例：800g = 1包 → 填 800</div>
+            </div>
+            <div class="form-group">
+                <label>安全線（以顯示單位）</label>
+                <input type="number" id="editThreshold" min="0" step="any" placeholder="例：5">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>預設進貨庫位</label>
+                <select id="editReceive"></select>
+            </div>
+            <div class="form-group">
+                <label>預設消耗庫位</label>
+                <select id="editIssue"></select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>允許使用的庫位</label>
+            <div class="checkbox-group" id="editAllowed"></div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>排序</label>
+                <input type="number" id="editSortOrder" step="1" placeholder="數字越小越前面">
+            </div>
+            <div class="form-group">
+                <label>狀態</label>
+                <select id="editActive">
+                    <option value="true">啟用</option>
+                    <option value="false">停用</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeItemModal()">取消</button>
+            <button class="btn btn-primary" onclick="saveItem()">儲存品項</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { doc, setDoc, onSnapshot, runTransaction, initializeFirestore, persistentLocalCache, persistentMultipleTabManager }
+        from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCUYkvADtC6tM8uENRFNUb7OJlTUcisfFE",
+        authDomain: "caishushu-inventory.firebaseapp.com",
+        projectId: "caishushu-inventory",
+        storageBucket: "caishushu-inventory.firebasestorage.app",
+        messagingSenderId: "228644978060",
+        appId: "1:228644978060:web:ac87081548d5a19305eaa9"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = initializeFirestore(app, {
+        experimentalAutoDetectLongPolling: true,
+        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+    });
+
+    const mainRef     = doc(db, "inventory", "mainStore");
+    const settingsRef = doc(db, "inventory", "settings");
+
+    const LOCATION_DEFS = {
+        warehouseFrozen:  { name: "大倉冷凍",  short: "冷凍" },
+        warehouseChilled: { name: "大倉冷藏",  short: "冷藏" },
+        warehouseRoom:    { name: "大倉常溫",  short: "常溫" },
+        prep:             { name: "備貨區",    short: "備貨" },
+        onsiteChilled:    { name: "現場冷藏",  short: "現場冷藏" },
+        onsiteRoom:       { name: "現場常溫",  short: "現場常溫" }
+    };
+    const STORAGE_PRESETS = {
+        冷凍: { receive: "warehouseFrozen",  issue: "prep",          allowed: ["warehouseFrozen", "prep"] },
+        冷藏: { receive: "warehouseChilled", issue: "prep",          allowed: ["warehouseChilled", "prep"] },
+        常溫: { receive: "warehouseRoom",    issue: "warehouseRoom", allowed: ["warehouseRoom"] }
+    };
+    const DEFAULT_CATEGORIES = ['肉類','海鮮','臘腸','薯條起司','蔬菜','罐頭類','飲料','粉','醬料','外帶醬料','包材','衛生用品','清潔用品'];
+
+    let inventoryData = [];
+    let categories    = [...DEFAULT_CATEGORIES];
+    let adminPin      = "1234";
+
+    // ── Helpers ─────────────────────────────────────────
+    function nn(v, fb = 0) { const n = Number(v); return Number.isFinite(n) ? n : fb; }
+    function esc(s) { return String(s ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c])); }
+
+    function normalizeItem(item, idx) {
+        const storageType = item.storageType || '冷凍';
+        const preset = STORAGE_PRESETS[storageType] || STORAGE_PRESETS['冷凍'];
+        const basePerDisplay = nn(item.basePerDisplay, 1) || 1;
+        const thresholdDisplay = nn(item.thresholdDisplay ?? item.thresholdBase ?? item.threshold, 0);
+        const locs = {};
+        Object.keys(LOCATION_DEFS).forEach(k => { locs[k] = nn(item.locations?.[k], 0); });
+        if (!item.locations) {
+            locs[preset.receive] = nn(item.freezerStock, 0);
+            if (preset.issue !== preset.receive) locs[preset.issue] = nn(item.chillerStock, 0);
+        }
+        return {
+            displayUnit: item.displayUnit || item.unit || '個',
+            baseUnit: item.baseUnit || item.displayUnit || item.unit || '個',
+            basePerDisplay,
+            storageType,
+            thresholdDisplay,
+            thresholdBase: nn(item.thresholdBase, thresholdDisplay * basePerDisplay),
+            allowedLocations: Array.isArray(item.allowedLocations) && item.allowedLocations.length
+                ? item.allowedLocations : preset.allowed,
+            defaultReceiveLocation: item.defaultReceiveLocation || preset.receive,
+            defaultIssueLocation:   item.defaultIssueLocation   || preset.issue,
+            active: item.active !== false,
+            sortOrder: nn(item.sortOrder, idx),
+            ...item,
+            locations: locs
+        };
+    }
+
+    // ── Firebase listeners ───────────────────────────────
+    onSnapshot(mainRef, snap => {
+        if (snap.exists()) {
+            const data = snap.data();
+            inventoryData = (data.items || []).map(normalizeItem);
+        } else {
+            inventoryData = [];
+        }
+        renderItems();
+    });
+
+    onSnapshot(settingsRef, snap => {
+        if (snap.exists()) {
+            const data = snap.data();
+            categories = data.categories || DEFAULT_CATEGORIES;
+            adminPin   = data.adminPin   || "1234";
+        }
+        renderCategories();
+    });
+
+    async function runItemTransaction(mutate) {
+        try {
+            await runTransaction(db, async tx => {
+                const snap = await tx.get(mainRef);
+                const data = snap.exists() ? snap.data() : { items: [], logs: [] };
+                const items = (data.items || []).map(normalizeItem);
+                const txLogs = data.logs || [];
+                if (mutate(items, txLogs) === false) return;
+                if (txLogs.length > 100) txLogs.splice(100);
+                tx.set(mainRef, { ...data, items, logs: txLogs, lastUpdated: new Date().toISOString() });
+            });
+            showToast("✅ 已儲存");
+        } catch (e) {
+            alert("寫入失敗，請再試一次：" + e.message);
+        }
+    }
+
+    function pushLog(txLogs, text) {
+        txLogs.unshift({ time: new Date().toLocaleString('zh-TW', { hour12: false }), text });
+    }
+
+    // ── PIN ──────────────────────────────────────────────
+    window.checkPin = function() {
+        const val = document.getElementById('pinInput').value;
+        if (val === adminPin) {
+            sessionStorage.setItem('adminUnlocked', '1');
+            document.getElementById('pinScreen').style.display = 'none';
+            document.getElementById('adminPanel').style.display = 'block';
+        } else {
+            document.getElementById('pinError').textContent = 'PIN 錯誤，請再試一次';
+            document.getElementById('pinInput').value = '';
+        }
+    };
+
+    window.logout = function() {
+        sessionStorage.removeItem('adminUnlocked');
+        document.getElementById('adminPanel').style.display = 'none';
+        document.getElementById('pinScreen').style.display = 'flex';
+        document.getElementById('pinInput').value = '';
+        document.getElementById('pinError').textContent = '';
+    };
+
+    document.getElementById('pinInput').addEventListener('keydown', e => { if (e.key === 'Enter') window.checkPin(); });
+
+    if (sessionStorage.getItem('adminUnlocked') === '1') {
+        document.getElementById('pinScreen').style.display = 'none';
+        document.getElementById('adminPanel').style.display = 'block';
+    }
+
+    // ── Tabs ─────────────────────────────────────────────
+    window.switchTab = function(tab) {
+        document.querySelectorAll('.tab').forEach(el =>
+            el.classList.toggle('active', el.dataset.tab === tab));
+        document.querySelectorAll('.tab-content').forEach(el =>
+            el.classList.toggle('active', el.id === 'tab-' + tab));
+    };
+
+    // ── Item table ────────────────────────────────────────
+    function renderItems() {
+        const sorted = [...inventoryData].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+        document.getElementById('itemsBody').innerHTML = sorted.length
+            ? sorted.map(item => `
+                <tr class="${item.active === false ? 'inactive-row' : ''}">
+                    <td>${esc(item.sortOrder)}</td>
+                    <td><strong>${esc(item.name)}</strong><br><small style="color:#999;">${esc(item.category)}</small></td>
+                    <td style="font-size:13px;">${esc(item.basePerDisplay)} ${esc(item.baseUnit)} = 1 ${esc(item.displayUnit)}</td>
+                    <td>${esc(item.thresholdDisplay)} ${esc(item.displayUnit)}</td>
+                    <td>${esc(LOCATION_DEFS[item.defaultReceiveLocation]?.name || '—')}</td>
+                    <td><span class="badge ${item.active === false ? 'badge-off' : 'badge-on'}">${item.active === false ? '停用' : '啟用'}</span></td>
+                    <td>
+                        <div class="action-cell">
+                            <button class="btn btn-primary btn-sm" onclick="openItemEditor(${esc(item.id)})">編輯</button>
+                            <button class="btn btn-outline btn-sm" onclick="toggleActive(${esc(item.id)})">${item.active === false ? '啟用' : '停用'}</button>
+                        </div>
+                    </td>
+                </tr>`).join('')
+            : '<tr><td colspan="7" style="text-align:center;color:#999;padding:20px;">尚無品項資料</td></tr>';
+    }
+
+    // ── Categories ────────────────────────────────────────
+    function renderCategories() {
+        const el = document.getElementById('categoryList');
+        if (!el) return;
+        el.innerHTML = categories.length
+            ? categories.map(cat => `
+                <div class="card-item">
+                    <span>${esc(cat)}</span>
+                    <button class="btn btn-outline btn-sm" onclick="removeCategory('${esc(cat)}')">移除</button>
+                </div>`).join('')
+            : '<div class="card-item" style="color:#999;">尚無分類</div>';
+
+        const dl = document.getElementById('categoryDatalist');
+        if (dl) dl.innerHTML = categories.map(c => `<option value="${esc(c)}"></option>`).join('');
+    }
+
+    window.addCategory = function() {
+        const input = document.getElementById('newCatInput');
+        const val = input.value.trim();
+        if (!val) return;
+        if (categories.includes(val)) { showToast('分類已存在'); return; }
+        setDoc(settingsRef, { categories: [...categories, val], adminPin }, { merge: true })
+            .then(() => { input.value = ''; showToast('✅ 已新增分類'); })
+            .catch(e => alert('儲存失敗：' + e.message));
+    };
+
+    window.removeCategory = function(cat) {
+        if (inventoryData.some(i => i.category === cat)) {
+            alert(`「${cat}」仍有品項使用，請先調整品項分類再移除。`);
+            return;
+        }
+        if (!confirm(`確定移除分類「${cat}」？`)) return;
+        setDoc(settingsRef, { categories: categories.filter(c => c !== cat), adminPin }, { merge: true })
+            .then(() => showToast('✅ 已移除分類'))
+            .catch(e => alert('儲存失敗：' + e.message));
+    };
+
+    // ── Item Editor ───────────────────────────────────────
+    function buildLocationOptions() {
+        return Object.entries(LOCATION_DEFS).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('');
+    }
+
+    function buildAllowedCheckboxes(allowed) {
+        return Object.entries(LOCATION_DEFS).map(([k, v]) =>
+            `<label><input type="checkbox" value="${k}" ${allowed.has(k) ? 'checked' : ''}> ${v.name}</label>`).join('');
+    }
+
+    window.openItemEditor = function(itemId = null) {
+        const item = itemId != null ? inventoryData.find(i => String(i.id) === String(itemId)) : null;
+        document.getElementById('itemModalTitle').textContent = item ? '編輯品項' : '新增品項';
+        document.getElementById('editItemId').value        = item?.id ?? '';
+        document.getElementById('editName').value          = item?.name ?? '';
+        document.getElementById('editCategory').value      = item?.category ?? '';
+        document.getElementById('editStorageType').value   = item?.storageType ?? '冷凍';
+        document.getElementById('editDisplayUnit').value   = item?.displayUnit ?? '包';
+        document.getElementById('editBaseUnit').value      = item?.baseUnit ?? item?.displayUnit ?? '包';
+        document.getElementById('editBasePerDisplay').value = item?.basePerDisplay ?? 1;
+        document.getElementById('editThreshold').value     = item?.thresholdDisplay ?? 0;
+        document.getElementById('editSortOrder').value     = item?.sortOrder ?? (inventoryData.length + 1);
+        document.getElementById('editActive').value        = String(item?.active !== false);
+
+        const locOpts = buildLocationOptions();
+        document.getElementById('editReceive').innerHTML = locOpts;
+        document.getElementById('editIssue').innerHTML   = locOpts;
+        document.getElementById('editReceive').value = item?.defaultReceiveLocation ?? 'warehouseFrozen';
+        document.getElementById('editIssue').value   = item?.defaultIssueLocation   ?? 'prep';
+
+        const allowed = new Set(item?.allowedLocations ?? ['warehouseFrozen', 'prep']);
+        document.getElementById('editAllowed').innerHTML = buildAllowedCheckboxes(allowed);
+
+        document.getElementById('itemModal').classList.add('open');
+    };
+
+    window.onStorageTypeChange = function() {
+        const preset = STORAGE_PRESETS[document.getElementById('editStorageType').value];
+        if (!preset) return;
+        document.getElementById('editReceive').value = preset.receive;
+        document.getElementById('editIssue').value   = preset.issue;
+        document.querySelectorAll('#editAllowed input[type="checkbox"]').forEach(cb => {
+            cb.checked = preset.allowed.includes(cb.value);
+        });
+    };
+
+    window.closeItemModal = function() {
+        document.getElementById('itemModal').classList.remove('open');
+    };
+
+    window.saveItem = function() {
+        const idVal          = document.getElementById('editItemId').value;
+        const name           = document.getElementById('editName').value.trim();
+        const category       = document.getElementById('editCategory').value.trim();
+        const storageType    = document.getElementById('editStorageType').value;
+        const displayUnit    = document.getElementById('editDisplayUnit').value.trim();
+        const baseUnit       = document.getElementById('editBaseUnit').value.trim();
+        const basePerDisplay = nn(document.getElementById('editBasePerDisplay').value, 1) || 1;
+        const thresholdDisp  = nn(document.getElementById('editThreshold').value, 0);
+        const sortOrder      = nn(document.getElementById('editSortOrder').value, inventoryData.length + 1);
+        const active         = document.getElementById('editActive').value === 'true';
+        const defaultReceive = document.getElementById('editReceive').value;
+        const defaultIssue   = document.getElementById('editIssue').value;
+        const allowedLocations = [...document.querySelectorAll('#editAllowed input:checked')].map(el => el.value);
+
+        if (!name || !category || !displayUnit || !baseUnit) {
+            alert('請完整填寫名稱、分類、顯示單位、基準單位'); return;
+        }
+        if (!allowedLocations.length) { alert('請至少勾選一個允許庫位'); return; }
+
+        const patch = {
+            id: idVal ? nn(idVal) : Date.now(),
+            name, category, storageType, displayUnit, baseUnit, basePerDisplay,
+            thresholdDisplay: thresholdDisp,
+            thresholdBase: thresholdDisp * basePerDisplay,
+            defaultReceiveLocation: defaultReceive,
+            defaultIssueLocation:   defaultIssue,
+            allowedLocations, sortOrder, active
+        };
+
+        runItemTransaction((items, txLogs) => {
+            const idx = items.findIndex(i => String(i.id) === String(patch.id));
+            if (idx >= 0) {
+                items[idx] = normalizeItem({ ...items[idx], ...patch }, idx);
+                pushLog(txLogs, `⚙️ 後台：編輯品項「${name}」`);
+            } else {
+                items.push(normalizeItem({ ...patch, locations: {} }, items.length));
+                pushLog(txLogs, `⚙️ 後台：新增品項「${name}」`);
+            }
+        }).then(() => closeItemModal());
+    };
+
+    window.toggleActive = function(itemId) {
+        const item = inventoryData.find(i => String(i.id) === String(itemId));
+        if (!item) return;
+        const next = item.active === false;
+        if (!confirm(`${next ? '啟用' : '停用'}「${item.name}」？`)) return;
+        runItemTransaction((items, txLogs) => {
+            const it = items.find(i => String(i.id) === String(itemId));
+            if (!it) return false;
+            it.active = next;
+            pushLog(txLogs, `⚙️ 後台：${next ? '啟用' : '停用'}品項「${it.name}」`);
+        });
+    };
+
+    // ── PIN change ────────────────────────────────────────
+    window.changePin = function() {
+        const current = document.getElementById('currentPin').value;
+        const newP    = document.getElementById('newPin').value;
+        const confP   = document.getElementById('confirmPin').value;
+        if (current !== adminPin) { alert('目前 PIN 碼不正確'); return; }
+        if (!/^\d{4}$/.test(newP)) { alert('新 PIN 碼必須是 4 位數字'); return; }
+        if (newP !== confP) { alert('新 PIN 碼與確認碼不一致'); return; }
+        setDoc(settingsRef, { categories, adminPin: newP }, { merge: true })
+            .then(() => {
+                adminPin = newP;
+                showToast('✅ PIN 已更新');
+                ['currentPin', 'newPin', 'confirmPin'].forEach(id => { document.getElementById(id).value = ''; });
+            })
+            .catch(e => alert('儲存失敗：' + e.message));
+    };
+
+    // ── Toast ─────────────────────────────────────────────
+    function showToast(text) {
+        const el = document.getElementById('toast');
+        el.textContent = text;
+        el.style.display = 'block';
+        clearTimeout(showToast._t);
+        showToast._t = setTimeout(() => { el.style.display = 'none'; }, 2200);
+    }
+</script>
+</body>
+</html>
