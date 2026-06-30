@@ -109,10 +109,6 @@
         .filter-btn.active, .filter-btn:hover { background-color: var(--primary-color); color: #fff; border-color: var(--primary-color); }
         .alert-box { background-color: #ffebee; border-left: 5px solid #c62828; padding: 14px 16px; border-radius: 12px; margin-bottom: 16px; display: none; }
         .alert-box ul { margin: 8px 0 0; padding-left: 20px; font-size: 14px; }
-        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
-        .summary-card { background: #f8fbf8; border: 1px solid #e0ebe2; border-radius: 14px; padding: 12px; }
-        .summary-card .label { color: var(--muted); font-size: 13px; }
-        .summary-card .value { font-size: 24px; font-weight: 800; color: var(--primary-dark); margin-top: 2px; }
         table { width: 100%; border-collapse: collapse; font-size: 14px; text-align: center; }
         th, td { padding: 12px 9px; border-bottom: 1px solid #e0e4e2; vertical-align: middle; }
         th { background-color: #f4f8f5; color: #41514a; position: sticky; top: 93px; z-index: 10; }
@@ -154,10 +150,6 @@
         .field-label { display: block; color: #506059; font-size: 13px; font-weight: 800; margin-bottom: 5px; }
         .help { color: #7d8a83; font-size: 12px; line-height: 1.5; margin-top: 5px; }
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
-        .admin-banner { background: #fff8e1; border: 1px solid #ffe0a6; border-radius: 14px; padding: 12px; margin-bottom: 14px; color: #6d4c00; line-height: 1.6; }
-        .admin-layout { display: grid; grid-template-columns: 260px 1fr; gap: 14px; }
-        .side-card { background: #f8fbf8; border: 1px solid #e0ebe2; border-radius: 14px; padding: 14px; }
-        .admin-table-wrap { overflow-x: auto; }
         .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
         .chip { border-radius: 999px; background: #eef5ef; border: 1px solid #d6e5da; padding: 7px 10px; display: inline-flex; gap: 8px; align-items: center; font-size: 13px; }
         .toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%) translateY(20px); background: #23352b; color: #fff; border-radius: 999px; padding: 10px 16px; opacity: 0; pointer-events: none; transition: all .22s ease; z-index: 200; box-shadow: var(--shadow); }
@@ -166,16 +158,13 @@
             .hero { grid-template-columns: 1fr; position: static; }
             .header-actions { justify-content: flex-start; }
             .toolbar { grid-template-columns: 1fr; }
-            .summary-grid { grid-template-columns: repeat(2, 1fr); }
             .desktop-table { display: none; }
             .mobile-cards { display: block; }
             .location-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-            .admin-layout { grid-template-columns: 1fr; }
         }
         @media (max-width: 560px) {
             .app-shell { padding: 10px; }
             .panel, .hero { border-radius: 16px; padding: 14px; }
-            .summary-grid { grid-template-columns: 1fr; }
             .form-grid { grid-template-columns: 1fr; }
             .location-grid { grid-template-columns: 1fr; }
             .log-line { grid-template-columns: 1fr; gap: 2px; }
@@ -199,8 +188,8 @@
     </header>
 
     <nav class="nav-tabs" aria-label="主要功能">
-        <button class="nav-tab active" id="tabStock" type="button" onclick="switchView('stock')">庫存操作</button>
-        <button class="nav-tab" id="tabAdmin" type="button" onclick="switchView('admin')">品項管理後台</button>
+        <button class="nav-tab active" id="tabStock" type="button">庫存操作</button>
+        <a href="admin2.html" class="nav-tab" style="text-decoration:none;">品項管理後台 ↗</a>
     </nav>
 
     <main id="stockView" class="panel">
@@ -208,8 +197,6 @@
             <strong style="color:#c62828;">⚠️ 叫貨提醒：</strong> 以下大倉區庫存低於安全線，請安排叫貨。
             <ul id="alertList"></ul>
         </div>
-
-        <section class="summary-grid" id="summaryGrid"></section>
 
         <div class="toolbar">
             <input id="searchInput" class="search-input" type="search" placeholder="搜尋品項、分類或單位…" oninput="renderInventory()">
@@ -249,58 +236,6 @@
         </section>
     </main>
 
-    <main id="adminView" class="panel hidden">
-        <div class="admin-banner">
-            <strong>管理後台說明：</strong> 這版先把安全線、單位換算、分類與停用品項集中在後台，員工操作頁不再能直接修改安全線。<br>
-            目前 PIN 僅是前端防呆，不是正式權限；正式上線請接 Firebase Auth 與 Firestore Rules。
-        </div>
-        <section id="adminLock" class="side-card" style="max-width:520px;">
-            <label class="field-label" for="adminPin">輸入管理 PIN</label>
-            <div style="display:flex;gap:8px;">
-                <input id="adminPin" class="field" type="password" inputmode="numeric" placeholder="預設 1234">
-                <button class="btn btn-primary" type="button" onclick="unlockAdmin()">進入</button>
-            </div>
-            <div class="help">正式版請不要使用前端 PIN，這只是避免員工誤觸設定。</div>
-        </section>
-
-        <section id="adminContent" class="hidden">
-            <div class="admin-layout">
-                <aside class="side-card">
-                    <h3 style="margin-top:0;color:var(--primary-dark);">分類管理</h3>
-                    <div class="chip-row" id="categoryChips"></div>
-                    <div style="display:flex;gap:8px;margin-top:12px;">
-                        <input id="newCategoryInput" class="field" type="text" placeholder="新增分類">
-                        <button class="btn btn-primary btn-small" data-write="true" type="button" onclick="addCategory()">新增</button>
-                    </div>
-                    <hr style="border:0;border-top:1px solid #e0e4e2;margin:16px 0;">
-                    <h3 style="color:var(--primary-dark);">單位設計原則</h3>
-                    <p class="help">每個品項可以設定「基準單位」與「顯示單位」。例如豬肉基準單位為 g，顯示單位為包，800g = 1包；員工可輸入 400g 或 0.5包。</p>
-                </aside>
-                <section>
-                    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
-                        <h2 style="margin:0;color:var(--primary-dark);">品項管理</h2>
-                        <button class="btn btn-primary" data-write="true" type="button" onclick="openItemEditor()">＋ 新增品項</button>
-                    </div>
-                    <div class="admin-table-wrap">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>排序</th>
-                                    <th style="text-align:left;">品項</th>
-                                    <th>單位換算</th>
-                                    <th>安全線</th>
-                                    <th>預設入庫</th>
-                                    <th>狀態</th>
-                                    <th>操作</th>
-                                </tr>
-                            </thead>
-                            <tbody id="adminItemBody"></tbody>
-                        </table>
-                    </div>
-                </section>
-            </div>
-        </section>
-    </main>
 </div>
 
 <div class="modal-backdrop" id="actionModal">
@@ -352,73 +287,6 @@
             <div class="modal-actions">
                 <button class="btn btn-ghost" type="button" onclick="closeModal('actionModal')">取消</button>
                 <button class="btn btn-primary" data-write="true" type="submit">確認寫入</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div class="modal-backdrop" id="itemModal">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="itemModalTitle">
-        <div class="modal-header">
-            <h2 class="modal-title" id="itemModalTitle">新增品項</h2>
-            <button class="btn btn-ghost btn-small" type="button" onclick="closeModal('itemModal')">關閉</button>
-        </div>
-        <form onsubmit="saveItemFromForm(event)">
-            <input id="editItemId" type="hidden">
-            <div class="form-grid">
-                <label>
-                    <span class="field-label">品項名稱</span>
-                    <input id="editName" class="field" type="text" required placeholder="例如 豬絞肉（熟）">
-                </label>
-                <label>
-                    <span class="field-label">分類</span>
-                    <input id="editCategory" class="field" list="categoryList" type="text" required placeholder="例如 肉類">
-                    <datalist id="categoryList"></datalist>
-                </label>
-                <label>
-                    <span class="field-label">顯示單位</span>
-                    <input id="editDisplayUnit" class="field" type="text" required placeholder="例如 包、桶、盒、兩">
-                </label>
-                <label>
-                    <span class="field-label">基準單位</span>
-                    <input id="editBaseUnit" class="field" type="text" required placeholder="例如 g、ml、包、兩">
-                </label>
-                <label>
-                    <span class="field-label">換算：多少基準單位 = 1 顯示單位</span>
-                    <input id="editBasePerDisplay" class="field" type="number" min="0.0001" step="any" required placeholder="例如 800">
-                    <div class="help">若 800g = 1包，請填 800；若不用換算，填 1。</div>
-                </label>
-                <label>
-                    <span class="field-label">安全線，依顯示單位</span>
-                    <input id="editThresholdDisplay" class="field" type="number" min="0" step="any" required placeholder="例如 5">
-                </label>
-                <label>
-                    <span class="field-label">預設進貨庫位</span>
-                    <select id="editDefaultReceive"></select>
-                </label>
-                <label>
-                    <span class="field-label">預設消耗庫位</span>
-                    <select id="editDefaultIssue"></select>
-                </label>
-                <label>
-                    <span class="field-label">排序</span>
-                    <input id="editSortOrder" class="field" type="number" step="1" placeholder="數字越小越前面">
-                </label>
-                <label>
-                    <span class="field-label">狀態</span>
-                    <select id="editActive">
-                        <option value="true">啟用</option>
-                        <option value="false">停用</option>
-                    </select>
-                </label>
-                <div class="full">
-                    <span class="field-label">允許使用的庫位</span>
-                    <div class="chip-row" id="editAllowedLocations"></div>
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-ghost" type="button" onclick="closeModal('itemModal')">取消</button>
-                <button class="btn btn-primary" data-write="true" type="submit">儲存品項</button>
             </div>
         </form>
     </div>
@@ -525,7 +393,6 @@ const firebaseConfig = {
     ];
 
     const SCHEMA_VERSION = 2;
-    const ADMIN_PIN = "1234";
     const WAREHOUSE_KEYS = ["warehouseFrozen", "warehouseChilled", "warehouseRoom"];
     const ONSITE_KEYS = ["onsiteChilled", "onsiteRoom"];
     const LOCATION_DEFS = {
@@ -542,7 +409,6 @@ const firebaseConfig = {
     let settings = { categories: [], locations: Object.values(LOCATION_DEFS) };
     let currentCategoryFilter = "全部";
     let isOffline = false;
-    let isAdmin = sessionStorage.getItem("inventoryAdminUnlocked") === "true";
     let deferredInstallPrompt = null;
 
     function setSyncStatus(state) {
@@ -797,7 +663,6 @@ const firebaseConfig = {
     function renderAll() {
         renderFilters();
         renderInventory();
-        renderAdmin();
     }
 
     function renderFilters() {
@@ -814,20 +679,7 @@ const firebaseConfig = {
         return inventoryData.filter(item => item.active !== false && sumLocations(item, WAREHOUSE_KEYS) <= item.thresholdBase);
     }
 
-    function renderSummary() {
-        const activeItems = inventoryData.filter(i => i.active !== false);
-        const lowCount = lowStockItems().length;
-        const prepCount = activeItems.filter(i => normalizeNumber(i.locations?.prep, 0) > 0).length;
-        const inactiveCount = inventoryData.length - activeItems.length;
-        document.getElementById("summaryGrid").innerHTML = `
-            <div class="summary-card"><div class="label">啟用品項</div><div class="value">${activeItems.length}</div></div>
-            <div class="summary-card"><div class="label">低庫存提醒</div><div class="value">${lowCount}</div></div>
-            <div class="summary-card"><div class="label">備貨區有庫存</div><div class="value">${prepCount}</div></div>
-            <div class="summary-card"><div class="label">停用品項</div><div class="value">${inactiveCount}</div></div>`;
-    }
-
     function renderInventory() {
-        renderSummary();
         const tbody = document.getElementById("inventoryBody");
         const mobile = document.getElementById("mobileCards");
         const alertBox = document.getElementById("alertBox");
@@ -903,13 +755,6 @@ const firebaseConfig = {
         renderFilters();
     };
 
-    window.switchView = function(view) {
-        document.getElementById("stockView").classList.toggle("hidden", view !== "stock");
-        document.getElementById("adminView").classList.toggle("hidden", view !== "admin");
-        document.getElementById("tabStock").classList.toggle("active", view === "stock");
-        document.getElementById("tabAdmin").classList.toggle("active", view === "admin");
-        if (view === "admin") renderAdmin();
-    };
 
     function activeItemOptions(selectedId) {
         return inventoryData.filter(i => i.active !== false).map(item => `<option value="${item.id}" ${String(item.id) === String(selectedId) ? "selected" : ""}>${escapeHtml(item.category)}｜${escapeHtml(item.name)}</option>`).join("");
@@ -1020,153 +865,6 @@ const firebaseConfig = {
         if (!guardOnline()) return;
         if (!confirm("確定要清除所有紀錄嗎？所有連線設備都會同步清除。")) return;
         runStockTransaction((items, txLogs) => { txLogs.length = 0; });
-    };
-
-    window.unlockAdmin = function() {
-        const pin = document.getElementById("adminPin").value;
-        if (pin !== ADMIN_PIN) return alert("PIN 不正確。");
-        isAdmin = true;
-        sessionStorage.setItem("inventoryAdminUnlocked", "true");
-        renderAdmin();
-        showToast("已進入管理後台");
-    };
-
-    function renderAdmin() {
-        const lock = document.getElementById("adminLock");
-        const content = document.getElementById("adminContent");
-        if (!lock || !content) return;
-        lock.classList.toggle("hidden", isAdmin);
-        content.classList.toggle("hidden", !isAdmin);
-        if (!isAdmin) return;
-        renderCategoryManager();
-        renderAdminItems();
-    }
-
-    function renderCategoryManager() {
-        const chips = document.getElementById("categoryChips");
-        const cats = getAllCategories().filter(c => c !== "全部");
-        chips.innerHTML = cats.map(cat => `<span class="chip">${escapeHtml(cat)} <button class="btn btn-ghost btn-small" data-write="true" type="button" onclick="removeCategory('${escapeHtml(cat)}')">×</button></span>`).join("");
-    }
-
-    function renderAdminItems() {
-        const body = document.getElementById("adminItemBody");
-        body.innerHTML = normalizeItems(inventoryData).map(item => `
-            <tr class="${item.active === false ? "inactive-row" : ""}">
-                <td>${escapeHtml(item.sortOrder)}</td>
-                <td style="text-align:left;"><strong>${escapeHtml(item.name)}</strong><div class="help">${escapeHtml(item.category)}</div></td>
-                <td>${escapeHtml(item.basePerDisplay)} ${escapeHtml(item.baseUnit)} = 1 ${escapeHtml(item.displayUnit)}</td>
-                <td>${escapeHtml(item.thresholdDisplay)} ${escapeHtml(item.displayUnit)}<div class="help">${formatQty(item, item.thresholdBase)}</div></td>
-                <td>${LOCATION_DEFS[item.defaultReceiveLocation]?.name || "未設定"}</td>
-                <td>${item.active === false ? '<span class="badge badge-off">停用</span>' : '<span class="badge badge-ok">啟用</span>'}</td>
-                <td>
-                    <button class="btn btn-primary btn-small" type="button" onclick="openItemEditor(${item.id})">編輯</button>
-                    <button class="btn btn-ghost btn-small" data-write="true" type="button" onclick="toggleItemActive(${item.id})">${item.active === false ? "啟用" : "停用"}</button>
-                </td>
-            </tr>`).join("");
-    }
-
-    window.addCategory = function() {
-        const input = document.getElementById("newCategoryInput");
-        const val = input.value.trim();
-        if (!val) return;
-        runStockTransaction((items, txLogs, txSettings) => {
-            const cats = new Set([...(txSettings.categories || []), val]);
-            txSettings.categories = [...cats];
-            pushLog(txLogs, `⚙️ 後台設定：新增分類「${val}」`, { actionType: "category_add" });
-        });
-        input.value = "";
-    };
-
-    window.removeCategory = function(cat) {
-        const inUse = inventoryData.some(i => i.category === cat);
-        if (inUse) return alert("此分類仍有品項使用，請先調整品項分類或停用相關品項。");
-        if (!confirm(`確定移除分類「${cat}」？`)) return;
-        runStockTransaction((items, txLogs, txSettings) => {
-            txSettings.categories = (txSettings.categories || []).filter(c => c !== cat);
-            pushLog(txLogs, `⚙️ 後台設定：移除分類「${cat}」`, { actionType: "category_remove" });
-        });
-    };
-
-    window.openItemEditor = function(itemId = null) {
-        if (!isAdmin) return alert("請先進入管理後台。");
-        const item = itemId ? inventoryData.find(i => String(i.id) === String(itemId)) : null;
-        document.getElementById("itemModalTitle").textContent = item ? "編輯品項" : "新增品項";
-        document.getElementById("editItemId").value = item?.id || "";
-        document.getElementById("editName").value = item?.name || "";
-        document.getElementById("editCategory").value = item?.category || "";
-        document.getElementById("editDisplayUnit").value = item?.displayUnit || "包";
-        document.getElementById("editBaseUnit").value = item?.baseUnit || item?.displayUnit || "包";
-        document.getElementById("editBasePerDisplay").value = item?.basePerDisplay || 1;
-        document.getElementById("editThresholdDisplay").value = item?.thresholdDisplay || 0;
-        document.getElementById("editSortOrder").value = item?.sortOrder || (inventoryData.length + 1);
-        document.getElementById("editActive").value = String(item?.active !== false);
-        renderLocationOptionsForEditor(item);
-        openModal("itemModal");
-    };
-
-    function renderLocationOptionsForEditor(item) {
-        const receive = document.getElementById("editDefaultReceive");
-        const issue = document.getElementById("editDefaultIssue");
-        const options = Object.values(LOCATION_DEFS).map(loc => `<option value="${loc.id}">${loc.name}</option>`).join("");
-        receive.innerHTML = options;
-        issue.innerHTML = options;
-        receive.value = item?.defaultReceiveLocation || "warehouseRoom";
-        issue.value = item?.defaultIssueLocation || "onsiteRoom";
-        const allowed = new Set(item?.allowedLocations || ["warehouseRoom", "prep", "onsiteRoom"]);
-        document.getElementById("editAllowedLocations").innerHTML = Object.values(LOCATION_DEFS).map(loc => `
-            <label class="chip"><input type="checkbox" value="${loc.id}" ${allowed.has(loc.id) ? "checked" : ""}> ${loc.name}</label>`).join("");
-    }
-
-    window.saveItemFromForm = function(event) {
-        event.preventDefault();
-        if (!guardOnline()) return;
-        const idVal = document.getElementById("editItemId").value;
-        const allowedLocations = [...document.querySelectorAll("#editAllowedLocations input:checked")].map(el => el.value);
-        if (!allowedLocations.length) return alert("請至少選擇一個可用庫位。");
-        const formItem = {
-            id: idVal ? normalizeNumber(idVal) : Date.now(),
-            name: document.getElementById("editName").value.trim(),
-            category: document.getElementById("editCategory").value.trim(),
-            displayUnit: document.getElementById("editDisplayUnit").value.trim(),
-            baseUnit: document.getElementById("editBaseUnit").value.trim(),
-            basePerDisplay: normalizeNumber(document.getElementById("editBasePerDisplay").value, 1),
-            thresholdDisplay: normalizeNumber(document.getElementById("editThresholdDisplay").value, 0),
-            defaultReceiveLocation: document.getElementById("editDefaultReceive").value,
-            defaultIssueLocation: document.getElementById("editDefaultIssue").value,
-            sortOrder: normalizeNumber(document.getElementById("editSortOrder").value, inventoryData.length + 1),
-            active: document.getElementById("editActive").value === "true",
-            allowedLocations
-        };
-        if (!formItem.name || !formItem.category || !formItem.displayUnit || !formItem.baseUnit) return alert("請完整填寫品項資料。");
-        runStockTransaction((items, txLogs, txSettings) => {
-            const idx = items.findIndex(i => String(i.id) === String(formItem.id));
-            if (idx >= 0) {
-                const prev = items[idx];
-                const oldPer = normalizeNumber(prev.basePerDisplay, 1);
-                const newPer = formItem.basePerDisplay;
-                const factor = oldPer === newPer ? 1 : 1;
-                items[idx] = normalizeItem({ ...prev, ...formItem, thresholdBase: formItem.thresholdDisplay * formItem.basePerDisplay, locations: { ...prev.locations } }, idx);
-                if (factor !== 1) Object.keys(items[idx].locations).forEach(key => items[idx].locations[key] = roundQty(items[idx].locations[key] * factor));
-                pushLog(txLogs, `⚙️ 後台設定：編輯品項「${formItem.name}」`, { itemId: formItem.id, actionType: "item_update" });
-            } else {
-                items.push(normalizeItem({ ...formItem, thresholdBase: formItem.thresholdDisplay * formItem.basePerDisplay, locations: {} }, items.length));
-                pushLog(txLogs, `⚙️ 後台設定：新增品項「${formItem.name}」`, { itemId: formItem.id, actionType: "item_add" });
-            }
-            txSettings.categories = [...new Set([...(txSettings.categories || []), formItem.category])];
-        }).then(() => closeModal("itemModal"));
-    };
-
-    window.toggleItemActive = function(itemId) {
-        const item = inventoryData.find(i => String(i.id) === String(itemId));
-        if (!item) return;
-        const next = item.active === false;
-        if (!confirm(`${next ? "啟用" : "停用"}「${item.name}」？`)) return;
-        runStockTransaction((items, txLogs) => {
-            const it = items.find(i => String(i.id) === String(itemId));
-            if (!it) return false;
-            it.active = next;
-            pushLog(txLogs, `⚙️ 後台設定：${next ? "啟用" : "停用"}品項「${it.name}」`, { itemId, actionType: "item_toggle" });
-        });
     };
 
     function openModal(id) { document.getElementById(id).classList.add("open"); }
