@@ -435,6 +435,7 @@
         let lowCount = 0;
 
         inventoryData.forEach((item) => {
+            if (item.active === false) return; // 後台停用的品項不顯示
             if (currentCategoryFilter !== '全部' && item.category !== currentCategoryFilter) return;
 
             const isLow = item.freezerStock <= item.threshold;
@@ -448,7 +449,7 @@
                 <tr class="${isLow ? 'low-stock' : ''}">
                     <td style="color:#777; font-size:13px;">${item.category}</td>
                     <td style="text-align: left;"><strong>${item.name}</strong></td>
-                    <td><input type="number" value="${item.threshold}" style="width:45px; text-align:center;" onchange="updateThreshold(${item.id}, this.value)" ${dis}></td>
+                    <td style="font-size:14px; color:#555;">${item.threshold} <small>${item.unit}</small></td>
                     <td style="font-size:15px; font-weight:bold; color: ${isLow ? '#c62828' : '#455a64'};">${item.freezerStock} <small>${item.unit}</small></td>
                     <td>
                         <div class="action-group">
