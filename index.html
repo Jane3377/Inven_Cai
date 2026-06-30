@@ -179,7 +179,7 @@
         @media (display-mode: standalone) { .subtitle .pwa-hint { display: none; } }
 
         /* === Inline Card Action Panel === */
-        .card-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
+        .card-actions { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
         .card-act-btn { padding: 10px 6px; border-radius: 12px; font-size: 14px; font-weight: 800; background: #fff; cursor: pointer; transition: background 0.15s, color 0.15s; }
         .card-act-btn.act-consume { border: 1.5px solid var(--danger-color); color: var(--danger-color); }
         .card-act-btn.act-consume.active { background: var(--danger-color); color: #fff; }
@@ -187,6 +187,8 @@
         .card-act-btn.act-receive.active { background: var(--primary-color); color: #fff; }
         .card-act-btn.act-move { border: 1.5px solid var(--transfer-color); color: var(--transfer-color); }
         .card-act-btn.act-move.active { background: var(--transfer-color); color: #fff; }
+        .card-act-btn.act-return { border: 1.5px solid var(--warning-color); color: var(--warning-color); }
+        .card-act-btn.act-return.active { background: var(--warning-color); color: #fff; }
         .card-act-btn:disabled { opacity: 0.45; cursor: not-allowed; }
         .card-panel { margin-top: 10px; padding: 14px; background: #f7faf8; border-radius: 14px; border: 1px solid #d8e5dc; }
         .panel-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
@@ -238,12 +240,21 @@
         tr.count-dirty .count-table-confirm-btn { background: #f59e0b; }
         tr.count-confirmed td { background: #f4fbf4 !important; }
         tr.count-confirmed .count-table-confirm-btn { background: #43a047; }
-        /* === Desktop inline action panel === */
-        .desk-act-col { display: flex; flex-direction: column; gap: 5px; }
-        .desk-act-col .card-act-btn { padding: 6px 8px; font-size: 12px; border-radius: 8px; }
-        .desk-panel-cell { padding: 0 !important; border-bottom: 2px solid #d8e5dc !important; }
-        .desk-panel-inner { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 16px; background: #f7faf8; }
-        .desk-note { border: 1px solid #cdd7d1; border-radius: 10px; padding: 9px 12px; font-size: 14px; background: #fff; flex: 1; min-width: 100px; }
+        /* === Quick action inline (table rows) === */
+        .qact-input-wrap { display: flex; align-items: center; gap: 6px; }
+        .qact-qty { width: 76px; border: 1.5px solid #cdd7d1; border-radius: 10px; padding: 8px 10px; font-size: 15px; background: #fff; text-align: center; }
+        .qact-qty:focus { border-color: var(--primary-color); outline: none; }
+        .qact-btns { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+        .qact-btn { padding: 7px 10px; border: 0; border-radius: 9px; font-size: 13px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+        .qact-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+        .qact-receive { background: #e8f5e9; color: #2e7d32; }
+        .qact-move    { background: #e3f2fd; color: #0277bd; }
+        .qact-consume { background: #ffebee; color: #c62828; }
+        .qact-return  { background: #fff3e0; color: #e65100; }
+        .qact-info    { background: transparent; border: 1px solid #cdd7d1; color: #7d8a83; padding: 6px 8px; border-radius: 8px; font-size: 13px; cursor: pointer; position: relative; }
+        .info-pop { position: absolute; right: 0; top: calc(100% + 6px); background: #23352b; color: #fff; border-radius: 12px; padding: 10px 14px; font-size: 12px; line-height: 1.8; white-space: nowrap; z-index: 50; box-shadow: 0 8px 24px rgba(0,0,0,0.22); }
+        .info-pop::before { content: ""; position: absolute; top: -6px; right: 12px; border: 6px solid transparent; border-top: 0; border-bottom-color: #23352b; }
+        td.qact-td { white-space: nowrap; }
     </style>
 </head>
 <body>
@@ -285,14 +296,14 @@
             <table>
                 <thead>
                     <tr>
-                        <th style="width:8%;">類別</th>
-                        <th style="text-align:left;width:18%;">食材 / 物品</th>
-                        <th style="width:13%;">大倉區</th>
-                        <th style="width:13%;">備貨區</th>
-                        <th style="width:13%;">現場區</th>
-                        <th style="width:12%;">安全線</th>
-                        <th style="width:10%;">狀態</th>
-                        <th style="width:13%;">操作</th>
+                        <th style="width:6%;">類別</th>
+                        <th style="text-align:left;width:16%;">食材 / 物品</th>
+                        <th style="width:12%;">大倉</th>
+                        <th style="width:11%;">現場</th>
+                        <th style="width:9%;">備貨</th>
+                        <th style="width:9%;">提醒</th>
+                        <th style="width:12%;">數量</th>
+                        <th style="width:25%;">動作</th>
                     </tr>
                 </thead>
                 <tbody id="inventoryBody"><tr><td colspan="8" class="loading-text">🔄 正在載入資料庫，請稍候...</td></tr></tbody>
@@ -556,12 +567,12 @@ const firebaseConfig = {
         const cat = item.category || "其他";
         const name = item.name || "";
         if (["肉類", "海鮮", "臘腸", "薯條起司"].includes(cat) || /冷凍|冰淇淋|草莓/.test(name)) {
-            return { receive: "warehouseFrozen", issue: "onsiteChilled", allowed: ["warehouseFrozen", "prep", "onsiteChilled"] };
+            return { receive: "warehouseFrozen", issue: "onsiteChilled", consume: "prep", allowed: ["warehouseFrozen", "prep", "onsiteChilled"] };
         }
         if (cat === "蔬菜" || /鮮奶/.test(name)) {
-            return { receive: "warehouseChilled", issue: "onsiteChilled", allowed: ["warehouseChilled", "prep", "onsiteChilled"] };
+            return { receive: "warehouseChilled", issue: "onsiteChilled", consume: "prep", allowed: ["warehouseChilled", "prep", "onsiteChilled"] };
         }
-        return { receive: "warehouseRoom", issue: "onsiteRoom", allowed: ["warehouseRoom", "prep", "onsiteRoom"] };
+        return { receive: "warehouseRoom", issue: "onsiteRoom", consume: "onsiteRoom", allowed: ["warehouseRoom", "onsiteRoom"] };
     }
 
     function normalizeItem(raw, index = 0) {
@@ -577,8 +588,9 @@ const firebaseConfig = {
         item.basePerDisplay = normalizeNumber(item.basePerDisplay, unitProfile.basePerDisplay || 1);
         item.allowBaseInput = item.allowBaseInput ?? unitProfile.allowBaseInput;
         const locationMeta = inferDefaultLocations(item);
-        item.defaultReceiveLocation = item.defaultReceiveLocation || locationMeta.receive;
-        item.defaultIssueLocation = item.defaultIssueLocation || locationMeta.issue;
+        item.defaultReceiveLocation  = item.defaultReceiveLocation  || locationMeta.receive;
+        item.defaultIssueLocation    = item.defaultIssueLocation    || locationMeta.issue;
+        item.defaultConsumeLocation  = item.defaultConsumeLocation  || locationMeta.consume || "prep";
         item.allowedLocations = Array.isArray(item.allowedLocations) && item.allowedLocations.length ? item.allowedLocations : locationMeta.allowed;
         item.locations = { ...(item.locations || {}) };
         Object.keys(LOCATION_DEFS).forEach(key => {
@@ -795,15 +807,6 @@ const firebaseConfig = {
             return;
         }
         tbody.innerHTML = items.map(renderTableRow).join("");
-        Object.entries(deskPanelState).forEach(([itemId, type]) => {
-            if (!type) return;
-            const item = inventoryData.find(i => String(i.id) === String(itemId));
-            if (!item) return;
-            document.getElementById(`desk-btn-${type}-${itemId}`)?.classList.add("active");
-            const panelRow = document.getElementById(`desk-panel-tr-${itemId}`);
-            const panelCell = document.getElementById(`desk-panel-td-${itemId}`);
-            if (panelRow && panelCell) { panelCell.innerHTML = renderDeskPanel(item, type); panelRow.classList.remove("hidden"); }
-        });
         mobile.innerHTML = items.map(renderMobileCard).join("");
         Object.entries(cardPanelState).forEach(([itemId, type]) => {
             if (!type) return;
@@ -820,25 +823,50 @@ const firebaseConfig = {
         const warehouseBase = sumLocations(item, WAREHOUSE_KEYS);
         const isLow = item.active !== false && warehouseBase <= item.thresholdBase;
         const dis = item.active === false ? "disabled" : "";
+        const hasBase = item.allowBaseInput && item.baseUnit !== item.displayUnit;
+        const unitChips = [item.displayUnit, ...(hasBase ? [item.baseUnit] : [])].map((u, i) =>
+            `<label><input type="radio" name="qact-unit-${item.id}" value="${escapeHtml(u)}" ${i === 0 ? "checked" : ""}>${escapeHtml(u)}</label>`
+        ).join("");
+        const receiveLoc = LOCATION_DEFS[item.defaultReceiveLocation]?.short || item.defaultReceiveLocation;
+        const issueLoc   = LOCATION_DEFS[item.defaultIssueLocation]?.short   || item.defaultIssueLocation;
+        const consumeLoc = LOCATION_DEFS[item.defaultConsumeLocation]?.short  || item.defaultConsumeLocation;
+        const infoHtml = `入庫 → ${receiveLoc}&#10;移倉 ${receiveLoc} → ${issueLoc}&#10;消耗 ← ${consumeLoc}&#10;回放 備貨 → ${receiveLoc}`;
         return `
             <tr class="${isLow ? "low-stock" : ""} ${item.active === false ? "inactive-row" : ""}">
                 <td><span class="badge badge-muted">${escapeHtml(item.category)}</span></td>
                 <td class="name-cell"><strong>${escapeHtml(item.name)}</strong><div class="help">${escapeHtml(item.basePerDisplay)} ${escapeHtml(item.baseUnit)} = 1 ${escapeHtml(item.displayUnit)}</div></td>
                 <td>${renderLocationStack(item, WAREHOUSE_KEYS)}</td>
-                <td>${renderLocationStack(item, ["prep"])}</td>
                 <td>${renderLocationStack(item, ONSITE_KEYS)}</td>
-                <td><strong>${formatQty(item, item.thresholdBase, { compact: true })}</strong></td>
-                <td>${item.active === false ? '<span class="badge badge-off">停用</span>' : isLow ? '<span class="badge badge-low">⚠️ 補貨</span>' : '<span class="badge badge-ok">✅ 充足</span>'}</td>
+                <td>${renderLocationStack(item, ["prep"])}</td>
+                <td>${item.active === false
+                    ? '<span class="badge badge-off">停用</span>'
+                    : isLow
+                        ? `<span class="badge badge-low">⚠️ 補貨</span><div style="font-size:11px;color:#9aaba3;margin-top:3px;">安全線 ${formatQty(item, item.thresholdBase, { compact: true })}</div>`
+                        : `<span class="badge badge-ok">✅ 充足</span><div style="font-size:11px;color:#9aaba3;margin-top:3px;">安全線 ${formatQty(item, item.thresholdBase, { compact: true })}</div>`}
+                </td>
                 <td>
-                    <div class="desk-act-col">
-                        <button class="card-act-btn act-consume" id="desk-btn-consume-${item.id}" type="button" ${dis} onclick="toggleDeskAction(${item.id},'consume')">消耗</button>
-                        <button class="card-act-btn act-receive" id="desk-btn-receive-${item.id}" type="button" ${dis} onclick="toggleDeskAction(${item.id},'receive')">入庫</button>
-                        <button class="card-act-btn act-move" id="desk-btn-move-${item.id}" type="button" ${dis} onclick="toggleDeskAction(${item.id},'move')">移倉</button>
+                    <div class="qact-input-wrap">
+                        <input class="qact-qty" id="qact-qty-${item.id}" type="number" min="0" step="any" inputmode="decimal" placeholder="0" ${dis}>
+                        <div class="unit-chips">${unitChips}</div>
                     </div>
                 </td>
-            </tr>
-            <tr class="hidden" id="desk-panel-tr-${item.id}">
-                <td class="desk-panel-cell" colspan="8" id="desk-panel-td-${item.id}"></td>
+                <td class="qact-td">
+                    <div class="qact-btns">
+                        <button class="qact-btn qact-receive" type="button" ${dis} onclick="execQuickAction(${item.id},'receive')">入庫</button>
+                        <button class="qact-btn qact-move"    type="button" ${dis} onclick="execQuickAction(${item.id},'move')">移倉</button>
+                        <button class="qact-btn qact-consume" type="button" ${dis} onclick="execQuickAction(${item.id},'consume')">消耗</button>
+                        <button class="qact-btn qact-return"  type="button" ${dis} onclick="execQuickAction(${item.id},'return')">回放</button>
+                        <div style="position:relative;display:inline-block;">
+                            <button class="qact-info" type="button" onclick="toggleInfoPop(event,${item.id})" title="${infoHtml}">ℹ️</button>
+                            <div class="info-pop hidden" id="info-pop-${item.id}">
+                                入庫 → ${escapeHtml(receiveLoc)}<br>
+                                移倉 ${escapeHtml(receiveLoc)} → ${escapeHtml(issueLoc)}<br>
+                                消耗 ← ${escapeHtml(consumeLoc)}<br>
+                                回放 備貨 → ${escapeHtml(receiveLoc)}
+                            </div>
+                        </div>
+                    </div>
+                </td>
             </tr>`;
     }
 
@@ -862,126 +890,66 @@ const firebaseConfig = {
                 </div>
                 <div class="location-grid">${locKeys.map(key => `<div class="location-tile"><div class="loc">${LOCATION_DEFS[key].name}</div><div class="qty">${formatQty(item, normalizeNumber(item.locations?.[key], 0))}</div></div>`).join("")}</div>
                 <div class="card-actions">
-                    <button class="card-act-btn act-consume" id="actbtn-consume-${item.id}" type="button" ${dis} onclick="toggleCardAction(${item.id},'consume')">📤 消耗</button>
                     <button class="card-act-btn act-receive" id="actbtn-receive-${item.id}" type="button" ${dis} onclick="toggleCardAction(${item.id},'receive')">📦 入庫</button>
-                    <button class="card-act-btn act-move" id="actbtn-move-${item.id}" type="button" ${dis} onclick="toggleCardAction(${item.id},'move')">🔄 移倉</button>
+                    <button class="card-act-btn act-move"    id="actbtn-move-${item.id}"    type="button" ${dis} onclick="toggleCardAction(${item.id},'move')">🔄 移倉</button>
+                    <button class="card-act-btn act-consume" id="actbtn-consume-${item.id}" type="button" ${dis} onclick="toggleCardAction(${item.id},'consume')">📤 消耗</button>
+                    <button class="card-act-btn act-return"  id="actbtn-return-${item.id}"  type="button" ${dis} onclick="toggleCardAction(${item.id},'return')">↩️ 回放</button>
                 </div>
                 <div class="card-panel hidden" id="card-panel-${item.id}"></div>
             </article>`;
     }
 
-    const deskPanelState = {};
-
-    window.toggleDeskAction = function(itemId, type) {
+    window.execQuickAction = function(itemId, type) {
         if (!guardOnline()) return;
         const item = inventoryData.find(i => String(i.id) === String(itemId));
         if (!item) return;
-        const panelRow = document.getElementById(`desk-panel-tr-${itemId}`);
-        const panelCell = document.getElementById(`desk-panel-td-${itemId}`);
-        if (!panelRow || !panelCell) return;
-        const current = deskPanelState[itemId];
-        ["consume", "receive", "move"].forEach(t => document.getElementById(`desk-btn-${t}-${itemId}`)?.classList.remove("active"));
-        if (current === type) {
-            deskPanelState[itemId] = null;
-            panelRow.classList.add("hidden");
-            panelCell.innerHTML = "";
-            return;
-        }
-        deskPanelState[itemId] = type;
-        document.getElementById(`desk-btn-${type}-${itemId}`)?.classList.add("active");
-        panelCell.innerHTML = renderDeskPanel(item, type);
-        panelRow.classList.remove("hidden");
-        panelCell.querySelector(".panel-qty-input")?.focus();
-    };
-
-    function renderDeskPanel(item, type) {
-        const hasBase = item.allowBaseInput && item.baseUnit !== item.displayUnit;
-        const unitChips = [item.displayUnit, ...(hasBase ? [item.baseUnit] : [])].map((u, i) =>
-            `<label><input type="radio" name="desk-unit-${item.id}" value="${escapeHtml(u)}" ${i === 0 ? "checked" : ""}>${escapeHtml(u)}</label>`
-        ).join("");
-        const qtyAndSuffix = `
-            <div class="unit-chips">${unitChips}</div>
-            <input class="panel-input panel-qty-input" id="desk-qty-${item.id}" type="number" min="0" step="any" inputmode="decimal" placeholder="數量" style="width:110px;flex:none;">
-            <input class="desk-note" type="text" id="desk-note-${item.id}" placeholder="備註（選填）">`;
-
-        if (type === "receive") {
-            const loc = LOCATION_DEFS[item.defaultReceiveLocation];
-            return `<div class="desk-panel-inner">
-                <span class="panel-label">入庫至</span><span class="panel-loc-info" style="background:#e8f5e9;color:#2e7d32;">${loc?.name || item.defaultReceiveLocation}</span>
-                <span class="panel-label">數量</span>${qtyAndSuffix}
-                <button class="panel-submit" type="button" style="background:#2e7d32;color:#fff;width:auto;padding:10px 20px;white-space:nowrap;" onclick="submitDeskAction(${item.id},'receive')">✅ 確認入庫</button>
-            </div>`;
-        }
-        if (type === "consume") {
-            const loc = LOCATION_DEFS[item.defaultIssueLocation];
-            return `<div class="desk-panel-inner">
-                <span class="panel-label">從</span><span class="panel-loc-info" style="background:#ffebee;color:#c62828;">${loc?.name || item.defaultIssueLocation}</span>
-                <span class="panel-label">數量</span>${qtyAndSuffix}
-                <button class="panel-submit" type="button" style="background:#c62828;color:#fff;width:auto;padding:10px 20px;white-space:nowrap;" onclick="submitDeskAction(${item.id},'consume')">📤 確認消耗</button>
-            </div>`;
-        }
-        if (type === "move") {
-            const allowed = item.allowedLocations || [];
-            const locChips = (radioName, defaultVal) => allowed.map(key => {
-                const def = LOCATION_DEFS[key];
-                const qty = formatQty(item, normalizeNumber(item.locations?.[key], 0), { compact: true });
-                return `<label><input type="radio" name="${radioName}" value="${key}" ${key === defaultVal ? "checked" : ""}><span>${def?.short || key}</span><span class="loc-sub">${qty}</span></label>`;
-            }).join("");
-            return `<div class="desk-panel-inner">
-                <span class="panel-label">從</span><div class="loc-chips">${locChips(`desk-from-${item.id}`, item.defaultReceiveLocation)}</div>
-                <span style="color:#aaa;font-size:18px;flex:none;">→</span>
-                <span class="panel-label">移至</span><div class="loc-chips">${locChips(`desk-to-${item.id}`, item.defaultIssueLocation)}</div>
-                <span class="panel-label">數量</span>${qtyAndSuffix}
-                <button class="panel-submit" type="button" style="background:#0288d1;color:#fff;width:auto;padding:10px 20px;white-space:nowrap;" onclick="submitDeskAction(${item.id},'move')">🔄 確認移倉</button>
-            </div>`;
-        }
-        return "";
-    }
-
-    window.submitDeskAction = function(itemId, type) {
-        if (!guardOnline()) return;
-        const item = inventoryData.find(i => String(i.id) === String(itemId));
-        if (!item) return;
-        const qtyVal = document.getElementById(`desk-qty-${itemId}`)?.value;
-        const noteVal = document.getElementById(`desk-note-${itemId}`)?.value.trim() || "";
-        const unit = document.querySelector(`input[name="desk-unit-${itemId}"]:checked`)?.value || item.displayUnit;
-        const fromLoc = type === "move"
-            ? (document.querySelector(`input[name="desk-from-${itemId}"]:checked`)?.value || item.defaultReceiveLocation)
-            : item.defaultIssueLocation;
-        const toLoc = type === "move"
-            ? (document.querySelector(`input[name="desk-to-${itemId}"]:checked`)?.value || item.defaultIssueLocation)
-            : item.defaultReceiveLocation;
-
+        const qtyVal = document.getElementById(`qact-qty-${itemId}`)?.value;
+        const unit = document.querySelector(`input[name="qact-unit-${itemId}"]:checked`)?.value || item.displayUnit;
         runStockTransaction((items, txLogs) => {
             const it = items.find(i => String(i.id) === String(itemId));
             if (!it) { alert("找不到此品項，請重新整理。"); return false; }
             const baseQty = roundQty(qtyToBase(it, qtyVal, unit));
             if (!Number.isFinite(baseQty) || baseQty <= 0) { alert("請輸入大於 0 的數量。"); return false; }
             const qtyText = formatQty(it, baseQty);
-            const noteText = noteVal ? `｜${noteVal}` : "";
+            const recLoc  = it.defaultReceiveLocation;
+            const issueLoc = it.defaultIssueLocation;
+            const conLoc  = it.defaultConsumeLocation;
             if (type === "receive") {
-                it.locations[toLoc] = roundQty(normalizeNumber(it.locations[toLoc], 0) + baseQty);
-                pushLog(txLogs, `📦 進貨入庫：【${it.name}】${LOCATION_DEFS[toLoc].name} +${qtyText}${noteText}`, { itemId: it.id, actionType: type, baseQty, toLocation: toLoc });
-            } else if (type === "consume") {
-                if (normalizeNumber(it.locations[fromLoc], 0) < baseQty) { alert(`${LOCATION_DEFS[fromLoc].name} 存量不足。`); return false; }
-                it.locations[fromLoc] = roundQty(it.locations[fromLoc] - baseQty);
-                pushLog(txLogs, `📤 現場消耗：【${it.name}】${LOCATION_DEFS[fromLoc].name} -${qtyText}${noteText}`, { itemId: it.id, actionType: type, baseQty, fromLocation: fromLoc });
+                it.locations[recLoc] = roundQty(normalizeNumber(it.locations[recLoc], 0) + baseQty);
+                pushLog(txLogs, `📦 進貨入庫：【${it.name}】${LOCATION_DEFS[recLoc].name} +${qtyText}`, { itemId: it.id, actionType: type, baseQty, toLocation: recLoc });
             } else if (type === "move") {
-                if (fromLoc === toLoc) { alert("來源與目的庫位不能相同。"); return false; }
-                if (normalizeNumber(it.locations[fromLoc], 0) < baseQty) { alert(`${LOCATION_DEFS[fromLoc].name} 存量不足。`); return false; }
-                it.locations[fromLoc] = roundQty(it.locations[fromLoc] - baseQty);
-                it.locations[toLoc] = roundQty(normalizeNumber(it.locations[toLoc], 0) + baseQty);
-                pushLog(txLogs, `🔄 移倉：【${it.name}】${LOCATION_DEFS[fromLoc].name} → ${LOCATION_DEFS[toLoc].name}，${qtyText}${noteText}`, { itemId: it.id, actionType: type, baseQty, fromLocation: fromLoc, toLocation: toLoc });
+                if (normalizeNumber(it.locations[recLoc], 0) < baseQty) { alert(`${LOCATION_DEFS[recLoc].name} 存量不足。`); return false; }
+                it.locations[recLoc]   = roundQty(it.locations[recLoc] - baseQty);
+                it.locations[issueLoc] = roundQty(normalizeNumber(it.locations[issueLoc], 0) + baseQty);
+                pushLog(txLogs, `🔄 移倉：【${it.name}】${LOCATION_DEFS[recLoc].name} → ${LOCATION_DEFS[issueLoc].name}，${qtyText}`, { itemId: it.id, actionType: type, baseQty, fromLocation: recLoc, toLocation: issueLoc });
+            } else if (type === "consume") {
+                if (normalizeNumber(it.locations[conLoc], 0) < baseQty) { alert(`${LOCATION_DEFS[conLoc].name} 存量不足。`); return false; }
+                it.locations[conLoc] = roundQty(it.locations[conLoc] - baseQty);
+                pushLog(txLogs, `📤 現場消耗：【${it.name}】${LOCATION_DEFS[conLoc].name} -${qtyText}`, { itemId: it.id, actionType: type, baseQty, fromLocation: conLoc });
+            } else if (type === "return") {
+                const prepLoc = "prep";
+                if (normalizeNumber(it.locations[prepLoc], 0) < baseQty) { alert(`${LOCATION_DEFS[prepLoc].name} 存量不足。`); return false; }
+                it.locations[prepLoc] = roundQty(it.locations[prepLoc] - baseQty);
+                it.locations[recLoc]  = roundQty(normalizeNumber(it.locations[recLoc], 0) + baseQty);
+                pushLog(txLogs, `↩️ 回放：【${it.name}】${LOCATION_DEFS[prepLoc].name} → ${LOCATION_DEFS[recLoc].name}，${qtyText}`, { itemId: it.id, actionType: type, baseQty, fromLocation: prepLoc, toLocation: recLoc });
             }
         }).then(() => {
-            deskPanelState[itemId] = null;
-            ["consume", "receive", "move"].forEach(t => document.getElementById(`desk-btn-${t}-${itemId}`)?.classList.remove("active"));
-            const panelRow = document.getElementById(`desk-panel-tr-${itemId}`);
-            const panelCell = document.getElementById(`desk-panel-td-${itemId}`);
-            if (panelRow) panelRow.classList.add("hidden");
-            if (panelCell) panelCell.innerHTML = "";
+            const inp = document.getElementById(`qact-qty-${itemId}`);
+            if (inp) inp.value = "";
         });
     };
+
+    window.toggleInfoPop = function(event, itemId) {
+        event.stopPropagation();
+        const pop = document.getElementById(`info-pop-${itemId}`);
+        if (!pop) return;
+        const isHidden = pop.classList.contains("hidden");
+        document.querySelectorAll(".info-pop").forEach(p => p.classList.add("hidden"));
+        if (isHidden) pop.classList.remove("hidden");
+    };
+    document.addEventListener("click", () => {
+        document.querySelectorAll(".info-pop").forEach(p => p.classList.add("hidden"));
+    });
 
     const cardPanelState = {};
 
@@ -992,7 +960,7 @@ const firebaseConfig = {
         const panel = document.getElementById(`card-panel-${itemId}`);
         if (!panel) return;
         const current = cardPanelState[itemId];
-        ["consume", "receive", "move"].forEach(t => document.getElementById(`actbtn-${t}-${itemId}`)?.classList.remove("active"));
+        ["consume", "receive", "move", "return"].forEach(t => document.getElementById(`actbtn-${t}-${itemId}`)?.classList.remove("active"));
         if (current === type) {
             cardPanelState[itemId] = null;
             panel.classList.add("hidden");
@@ -1029,11 +997,20 @@ const firebaseConfig = {
         }
 
         if (type === "consume") {
-            const loc = LOCATION_DEFS[item.defaultIssueLocation];
+            const loc = LOCATION_DEFS[item.defaultConsumeLocation];
             return `
-                <div class="panel-row"><span class="panel-label">從</span><span class="panel-loc-info" style="background:#ffebee;color:#c62828;">${loc?.name || item.defaultIssueLocation}</span><span style="font-size:12px;color:#999;">扣減</span></div>
+                <div class="panel-row"><span class="panel-label">從</span><span class="panel-loc-info" style="background:#ffebee;color:#c62828;">${loc?.name || item.defaultConsumeLocation}</span><span style="font-size:12px;color:#999;">扣減</span></div>
                 ${qtyRow}
                 <button class="panel-submit" type="button" style="background:#c62828;color:#fff;" onclick="submitCardAction(${item.id},'consume')">📤 確認消耗</button>`;
+        }
+
+        if (type === "return") {
+            const prepLoc = LOCATION_DEFS["prep"];
+            const recLoc  = LOCATION_DEFS[item.defaultReceiveLocation];
+            return `
+                <div class="panel-row"><span class="panel-label">備貨</span><span class="panel-loc-info" style="background:#fff3e0;color:#e65100;">${prepLoc?.name || "備貨"}</span><span style="font-size:12px;color:#999;">→</span><span class="panel-loc-info" style="background:#e8f5e9;color:#2e7d32;">${recLoc?.name || item.defaultReceiveLocation}</span></div>
+                ${qtyRow}
+                <button class="panel-submit" type="button" style="background:#e65100;color:#fff;" onclick="submitCardAction(${item.id},'return')">↩️ 確認回放</button>`;
         }
 
         if (type === "move") {
@@ -1061,10 +1038,10 @@ const firebaseConfig = {
         const unit = document.querySelector(`input[name="card-unit-${itemId}"]:checked`)?.value || item.displayUnit;
         const fromLoc = type === "move"
             ? (document.querySelector(`input[name="card-from-${itemId}"]:checked`)?.value || item.defaultReceiveLocation)
-            : item.defaultIssueLocation;
+            : null;
         const toLoc = type === "move"
             ? (document.querySelector(`input[name="card-to-${itemId}"]:checked`)?.value || item.defaultIssueLocation)
-            : item.defaultReceiveLocation;
+            : null;
 
         runStockTransaction((items, txLogs) => {
             const it = items.find(i => String(i.id) === String(itemId));
@@ -1073,23 +1050,31 @@ const firebaseConfig = {
             if (!Number.isFinite(baseQty) || baseQty <= 0) { alert("請輸入大於 0 的數量。"); return false; }
             const qtyText = formatQty(it, baseQty);
             const noteText = noteVal ? `｜${noteVal}` : "";
+            const recLoc = it.defaultReceiveLocation;
+            const conLoc = it.defaultConsumeLocation;
             if (type === "receive") {
-                it.locations[toLoc] = roundQty(normalizeNumber(it.locations[toLoc], 0) + baseQty);
-                pushLog(txLogs, `📦 進貨入庫：【${it.name}】${LOCATION_DEFS[toLoc].name} +${qtyText}${noteText}`, { itemId: it.id, actionType: type, baseQty, toLocation: toLoc });
+                it.locations[recLoc] = roundQty(normalizeNumber(it.locations[recLoc], 0) + baseQty);
+                pushLog(txLogs, `📦 進貨入庫：【${it.name}】${LOCATION_DEFS[recLoc].name} +${qtyText}${noteText}`, { itemId: it.id, actionType: type, baseQty, toLocation: recLoc });
             } else if (type === "consume") {
-                if (normalizeNumber(it.locations[fromLoc], 0) < baseQty) { alert(`${LOCATION_DEFS[fromLoc].name} 存量不足。`); return false; }
-                it.locations[fromLoc] = roundQty(it.locations[fromLoc] - baseQty);
-                pushLog(txLogs, `📤 現場消耗：【${it.name}】${LOCATION_DEFS[fromLoc].name} -${qtyText}${noteText}`, { itemId: it.id, actionType: type, baseQty, fromLocation: fromLoc });
+                if (normalizeNumber(it.locations[conLoc], 0) < baseQty) { alert(`${LOCATION_DEFS[conLoc].name} 存量不足。`); return false; }
+                it.locations[conLoc] = roundQty(it.locations[conLoc] - baseQty);
+                pushLog(txLogs, `📤 現場消耗：【${it.name}】${LOCATION_DEFS[conLoc].name} -${qtyText}${noteText}`, { itemId: it.id, actionType: type, baseQty, fromLocation: conLoc });
+            } else if (type === "return") {
+                const prepLoc = "prep";
+                if (normalizeNumber(it.locations[prepLoc], 0) < baseQty) { alert(`${LOCATION_DEFS[prepLoc].name} 存量不足。`); return false; }
+                it.locations[prepLoc] = roundQty(it.locations[prepLoc] - baseQty);
+                it.locations[recLoc]  = roundQty(normalizeNumber(it.locations[recLoc], 0) + baseQty);
+                pushLog(txLogs, `↩️ 回放：【${it.name}】${LOCATION_DEFS[prepLoc].name} → ${LOCATION_DEFS[recLoc].name}，${qtyText}${noteText}`, { itemId: it.id, actionType: type, baseQty, fromLocation: prepLoc, toLocation: recLoc });
             } else if (type === "move") {
                 if (fromLoc === toLoc) { alert("來源與目的庫位不能相同。"); return false; }
                 if (normalizeNumber(it.locations[fromLoc], 0) < baseQty) { alert(`${LOCATION_DEFS[fromLoc].name} 存量不足。`); return false; }
                 it.locations[fromLoc] = roundQty(it.locations[fromLoc] - baseQty);
-                it.locations[toLoc] = roundQty(normalizeNumber(it.locations[toLoc], 0) + baseQty);
+                it.locations[toLoc]   = roundQty(normalizeNumber(it.locations[toLoc], 0) + baseQty);
                 pushLog(txLogs, `🔄 移倉：【${it.name}】${LOCATION_DEFS[fromLoc].name} → ${LOCATION_DEFS[toLoc].name}，${qtyText}${noteText}`, { itemId: it.id, actionType: type, baseQty, fromLocation: fromLoc, toLocation: toLoc });
             }
         }).then(() => {
             cardPanelState[itemId] = null;
-            ["consume", "receive", "move"].forEach(t => document.getElementById(`actbtn-${t}-${itemId}`)?.classList.remove("active"));
+            ["consume", "receive", "move", "return"].forEach(t => document.getElementById(`actbtn-${t}-${itemId}`)?.classList.remove("active"));
             const panel = document.getElementById(`card-panel-${itemId}`);
             if (panel) { panel.classList.add("hidden"); panel.innerHTML = ""; }
         });
