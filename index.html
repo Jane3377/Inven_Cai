@@ -201,6 +201,25 @@
         .panel-note { width: 100%; border: 1px solid #cdd7d1; border-radius: 10px; padding: 9px 12px; font-size: 14px; margin-bottom: 10px; background: #fff; }
         .panel-submit { width: 100%; padding: 13px; border-radius: 12px; font-size: 16px; font-weight: 800; border: 0; cursor: pointer; }
 
+        /* === Count (盤點) view === */
+        .count-pin-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 20px; text-align: center; }
+        .count-pin-wrap h3 { margin: 0 0 8px; color: var(--primary-dark); font-size: 20px; }
+        .count-pin-input { font-size: 22px; letter-spacing: 10px; text-align: center; border: 2px solid #cdd7d1; border-radius: 12px; padding: 12px 20px; width: 200px; background: #fff; }
+        .count-items-grid { display: grid; gap: 14px; }
+        .count-card { background: #fff; border: 1.5px solid #e2e7e4; border-radius: 16px; padding: 16px; }
+        .count-card.count-dirty { border-color: #f59e0b; background: #fffdf0; }
+        .count-card.count-confirmed { border-color: var(--primary-color); background: #f4fbf4; }
+        .count-card-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        .count-card-title { font-size: 16px; font-weight: 900; color: #24352c; }
+        .count-loc-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f0f3f1; flex-wrap: wrap; }
+        .count-loc-row:last-of-type { border-bottom: 0; }
+        .count-loc-name { font-size: 13px; color: #506059; font-weight: 800; width: 70px; flex-shrink: 0; }
+        .count-loc-current { font-size: 12px; color: #9aaba3; width: 72px; flex-shrink: 0; }
+        .count-loc-input { border: 1.5px solid #cdd7d1; border-radius: 10px; padding: 8px 12px; font-size: 16px; width: 100px; background: #fff; }
+        .count-loc-input:focus { border-color: var(--primary-color); outline: none; }
+        .count-loc-unit { font-size: 13px; color: #506059; }
+        .count-confirm-btn { margin-top: 12px; width: 100%; padding: 11px; border-radius: 12px; font-weight: 800; border: 0; cursor: pointer; background: var(--primary-color); color: #fff; font-size: 15px; }
+        .count-confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         /* === Desktop inline action panel === */
         .desk-act-col { display: flex; flex-direction: column; gap: 5px; }
         .desk-act-col .card-act-btn { padding: 6px 8px; font-size: 12px; border-radius: 8px; }
@@ -223,7 +242,8 @@
     </header>
 
     <nav class="nav-tabs" aria-label="主要功能">
-        <button class="nav-tab active" id="tabStock" type="button">庫存操作</button>
+        <button class="nav-tab active" id="tabStock" type="button" onclick="openStockTab()">庫存操作</button>
+        <button class="nav-tab" id="tabCount" type="button" onclick="openCountTab()">📋 盤點</button>
         <a href="admin2.html" class="nav-tab" style="text-decoration:none;">品項管理後台 ↗</a>
     </nav>
 
@@ -326,6 +346,29 @@
         </form>
     </div>
 </div>
+
+<main id="countView" class="panel hidden">
+    <!-- PIN gate -->
+    <div id="countPinOverlay" class="count-pin-wrap">
+        <h3>🔒 請輸入盤點代碼</h3>
+        <p style="color:#8a9690;font-size:13px;margin:0 0 18px;">盤點代碼可在品項管理後台 → 系統設定中修改</p>
+        <input id="countPinInput" class="count-pin-input" type="password" inputmode="numeric" maxlength="8" placeholder="••••"
+            onkeydown="if(event.key==='Enter')verifyCountPin()">
+        <button class="btn btn-primary" style="margin-top:14px;width:200px;" type="button" onclick="verifyCountPin()">進入盤點</button>
+        <div id="countPinError" style="color:#c62828;margin-top:10px;font-size:14px;display:none;">代碼錯誤，請再試一次</div>
+    </div>
+    <!-- Count content -->
+    <div id="countContent" class="hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+            <div>
+                <strong style="font-size:18px;color:var(--primary-dark);">📋 庫存盤點</strong>
+                <div style="font-size:13px;color:#8a9690;margin-top:4px;">輸入各倉位實際數量（顯示單位），確認後寫入系統</div>
+            </div>
+            <button class="btn btn-ghost btn-small" type="button" onclick="lockCount()">🔒 鎖定盤點</button>
+        </div>
+        <div id="countItems" class="count-items-grid"></div>
+    </div>
+</main>
 
 <div class="toast" id="toast"></div>
 
@@ -441,7 +484,7 @@ const firebaseConfig = {
 
     let inventoryData = [];
     let logs = [];
-    let settings = { categories: [], locations: Object.values(LOCATION_DEFS) };
+    let settings = { categories: [], locations: Object.values(LOCATION_DEFS), countPin: "" };
     let currentCategoryFilter = "全部";
     let isOffline = false;
     let deferredInstallPrompt = null;
@@ -1168,6 +1211,130 @@ const firebaseConfig = {
         event.preventDefault();
         deferredInstallPrompt = event;
     });
+    // ── Tab switching ──────────────────────────────────────────
+    window.openStockTab = function() {
+        document.getElementById("tabStock")?.classList.add("active");
+        document.getElementById("tabCount")?.classList.remove("active");
+        document.getElementById("stockView")?.classList.remove("hidden");
+        document.getElementById("countView")?.classList.add("hidden");
+    };
+
+    let countUnlocked = false;
+
+    window.openCountTab = function() {
+        document.getElementById("tabCount")?.classList.add("active");
+        document.getElementById("tabStock")?.classList.remove("active");
+        document.getElementById("stockView")?.classList.add("hidden");
+        document.getElementById("countView")?.classList.remove("hidden");
+        if (countUnlocked) {
+            renderCountItems();
+        } else {
+            document.getElementById("countPinOverlay")?.classList.remove("hidden");
+            document.getElementById("countContent")?.classList.add("hidden");
+            setTimeout(() => document.getElementById("countPinInput")?.focus(), 80);
+        }
+    };
+
+    window.verifyCountPin = function() {
+        const input = document.getElementById("countPinInput")?.value || "";
+        const pin = settings.countPin || settings.adminPin || "1234";
+        if (input === pin) {
+            countUnlocked = true;
+            document.getElementById("countPinOverlay").classList.add("hidden");
+            document.getElementById("countContent").classList.remove("hidden");
+            document.getElementById("countPinError").style.display = "none";
+            document.getElementById("countPinInput").value = "";
+            renderCountItems();
+        } else {
+            document.getElementById("countPinError").style.display = "block";
+            document.getElementById("countPinInput").value = "";
+            document.getElementById("countPinInput").focus();
+        }
+    };
+
+    window.lockCount = function() {
+        countUnlocked = false;
+        document.getElementById("countPinOverlay").classList.remove("hidden");
+        document.getElementById("countContent").classList.add("hidden");
+        document.getElementById("countPinInput").value = "";
+    };
+
+    function renderCountItems() {
+        const container = document.getElementById("countItems");
+        if (!container) return;
+        const items = inventoryData.filter(i => i.active !== false);
+        if (!items.length) { container.innerHTML = '<div class="loading-text">沒有可盤點的品項</div>'; return; }
+        container.innerHTML = items.map(item => {
+            const locRows = (item.allowedLocations || []).map(key => {
+                const def = LOCATION_DEFS[key];
+                const currentBase = normalizeNumber(item.locations?.[key], 0);
+                const currentDisplay = toDisplayQty(item, currentBase);
+                return `<div class="count-loc-row">
+                    <span class="count-loc-name">${def?.short || key}</span>
+                    <span class="count-loc-current">現：${currentDisplay} ${escapeHtml(item.displayUnit)}</span>
+                    <input class="count-loc-input" type="number" min="0" step="any" inputmode="decimal"
+                        id="count-${item.id}-${key}" value="${currentDisplay}"
+                        oninput="markCountDirty(${item.id})">
+                    <span class="count-loc-unit">${escapeHtml(item.displayUnit)}</span>
+                </div>`;
+            }).join("");
+            return `<div class="count-card" id="count-card-${item.id}">
+                <div class="count-card-head">
+                    <div>
+                        <div class="count-card-title">${escapeHtml(item.name)}</div>
+                        <div style="font-size:12px;color:#8a9690;margin-top:2px;">${escapeHtml(item.category)}｜以 ${escapeHtml(item.displayUnit)} 為單位輸入</div>
+                    </div>
+                    <span class="badge badge-muted">${escapeHtml(item.category)}</span>
+                </div>
+                ${locRows}
+                <button class="count-confirm-btn" type="button" onclick="submitItemCount(${item.id})">✓ 確認此品項</button>
+            </div>`;
+        }).join("");
+    }
+
+    window.markCountDirty = function(itemId) {
+        const card = document.getElementById(`count-card-${itemId}`);
+        if (card) { card.classList.add("count-dirty"); card.classList.remove("count-confirmed"); }
+    };
+
+    window.submitItemCount = function(itemId) {
+        if (!guardOnline()) return;
+        const item = inventoryData.find(i => String(i.id) === String(itemId));
+        if (!item) return;
+        const allowed = item.allowedLocations || [];
+        const newVals = {};
+        for (const key of allowed) {
+            const raw = document.getElementById(`count-${itemId}-${key}`)?.value ?? "";
+            const n = normalizeNumber(raw, NaN);
+            if (!Number.isFinite(n) || n < 0) {
+                alert(`【${LOCATION_DEFS[key]?.name || key}】數量無效，請輸入 0 或正數。`);
+                return;
+            }
+            newVals[key] = roundQty(item.displayUnit !== item.baseUnit ? n * item.basePerDisplay : n);
+        }
+        runStockTransaction((items, txLogs) => {
+            const it = items.find(i => String(i.id) === String(itemId));
+            if (!it) { alert("找不到此品項，請重新整理。"); return false; }
+            const changes = [];
+            for (const key of allowed) {
+                const oldBase = roundQty(normalizeNumber(it.locations?.[key], 0));
+                const newBase = newVals[key];
+                if (Math.abs(newBase - oldBase) < 0.001) continue;
+                const oldTxt = formatQty(it, oldBase, { compact: true });
+                const newTxt = formatQty(it, newBase, { compact: true });
+                const diffBase = roundQty(newBase - oldBase);
+                const diffTxt = (diffBase > 0 ? "+" : "-") + formatQty(it, Math.abs(diffBase), { compact: true });
+                it.locations[key] = newBase;
+                changes.push(`${LOCATION_DEFS[key]?.short || key}：${oldTxt} → ${newTxt}（${diffTxt}）`);
+            }
+            if (!changes.length) { showToast("數量無變動，未寫入"); return false; }
+            pushLog(txLogs, `📋 盤點修正：【${it.name}】${changes.join("，")}`, { itemId: it.id, actionType: "count" });
+        }).then(() => {
+            const card = document.getElementById(`count-card-${itemId}`);
+            if (card) { card.classList.remove("count-dirty"); card.classList.add("count-confirmed"); }
+        });
+    };
+
     window.installPwaPrompt = async function() {
         if (!deferredInstallPrompt) {
             showToast("可使用瀏覽器分享選單加入主畫面");
