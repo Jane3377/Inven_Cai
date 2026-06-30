@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#2e7d32">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="蔡叔叔庫存">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="icon-192.svg">
+    <title>蔡叔叔比薩屋 - 庫存管理系統 v2</title>
+    <style>
+        :root {
+            --primary-color: #2e7d32;
+            --primary-dark: #1b5e20;
+            --transfer-color: #0288d1;
+            --danger-color: #c62828;
+            --warning-color: #ef6c00;
+            --bg-color: #f4f6f8;
+            --card-bg: #ffffff;
+            --line-color: #e0e4e2;
+            --muted: #68756f;
+            --soft-green: #edf7ed;
+            --soft-blue: #e8f3fb;
+            --soft-red: #fff1f1;
+            --radius-lg: 18px;
+            --radius-md: 12px;
+            --shadow: 0 8px 24px rgba(24, 48, 32, 0.10);
+        }
+        * { box-sizing: border-box; }
+        html, body { min-height: 100%; }
+        body {
+            margin: 0;
+            font-family: "Microsoft JhengHei", "PingFang TC", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            background: radial-gradient(circle at top left, #e8f5e9 0, #f4f6f8 28%, #f4f6f8 100%);
+            color: #26332d;
+        }
+        button, input, select, textarea { font: inherit; }
+        button { touch-action: manipulation; }
+        .app-shell { max-width: 1320px; margin: 0 auto; padding: 18px; }
+        .hero {
+            background: rgba(255,255,255,0.9);
+            border: 1px solid rgba(255,255,255,0.85);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            padding: 18px 20px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 12px;
+            align-items: center;
+            position: sticky;
+            top: 8px;
+            z-index: 20;
+            backdrop-filter: blur(14px);
+        }
+        h1 { margin: 0; color: var(--primary-dark); font-size: clamp(22px, 2.8vw, 32px); letter-spacing: 0.3px; }
+        .subtitle { margin: 6px 0 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+        .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+        .sync-status {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 7px 14px; border-radius: 999px; font-size: 13px;
+            font-weight: 700; white-space: nowrap;
+        }
+        .sync-status .dot { width: 9px; height: 9px; border-radius: 50%; }
+        .sync-syncing { background: #fff3e0; color: #e65100; }
+        .sync-syncing .dot { background: #fb8c00; animation: pulse 1s infinite; }
+        .sync-synced  { background: #e8f5e9; color: #2e7d32; }
+        .sync-synced  .dot { background: #43a047; }
+        .sync-failed  { background: #ffebee; color: #b71c1c; }
+        .sync-failed  .dot { background: #c62828; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .nav-tabs { display: flex; gap: 8px; margin: 18px 0; overflow-x: auto; padding-bottom: 2px; }
+        .nav-tab, .btn {
+            border: 0;
+            border-radius: 999px;
+            padding: 10px 16px;
+            background: #fff;
+            color: #33433b;
+            cursor: pointer;
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border: 1px solid var(--line-color);
+        }
+        .nav-tab.active, .btn-primary { background: var(--primary-color); color: #fff; border-color: var(--primary-color); }
+        .btn-danger { background: var(--danger-color); color: #fff; border-color: var(--danger-color); }
+        .btn-secondary { background: #607d8b; color: #fff; border-color: #607d8b; }
+        .btn-ghost { background: transparent; box-shadow: none; color: var(--muted); border: 1px solid var(--line-color); }
+        .btn-small { padding: 7px 11px; font-size: 13px; }
+        .panel {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            padding: 18px;
+            border: 1px solid rgba(255,255,255,0.85);
+        }
+        .toolbar { display: grid; grid-template-columns: minmax(220px, 1fr) auto; gap: 12px; align-items: center; margin-bottom: 14px; }
+        .search-input, .field, select, textarea {
+            width: 100%;
+            border: 1px solid #cdd7d1;
+            border-radius: 12px;
+            padding: 10px 12px;
+            background: #fff;
+            color: #26332d;
+            outline-color: var(--primary-color);
+        }
+        .filter-container { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 16px; }
+        .filter-btn { padding: 7px 13px; border: 1px solid #c8d5cd; background: #fff; border-radius: 999px; cursor: pointer; font-size: 14px; font-weight: 700; color: #42524a; }
+        .filter-btn.active, .filter-btn:hover { background-color: var(--primary-color); color: #fff; border-color: var(--primary-color); }
+        .alert-box { background-color: #ffebee; border-left: 5px solid #c62828; padding: 14px 16px; border-radius: 12px; margin-bottom: 16px; display: none; }
+        .alert-box ul { margin: 8px 0 0; padding-left: 20px; font-size: 14px; }
+        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+        .summary-card { background: #f8fbf8; border: 1px solid #e0ebe2; border-radius: 14px; padding: 12px; }
+        .summary-card .label { color: var(--muted); font-size: 13px; }
+        .summary-card .value { font-size: 24px; font-weight: 800; color: var(--primary-dark); margin-top: 2px; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; text-align: center; }
+        th, td { padding: 12px 9px; border-bottom: 1px solid #e0e4e2; vertical-align: middle; }
+        th { background-color: #f4f8f5; color: #41514a; position: sticky; top: 93px; z-index: 10; }
+        td.name-cell { text-align: left; min-width: 190px; }
+        .badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: 999px; font-size: 12px; font-weight: 800; }
+        .badge-muted { background: #f0f3f1; color: #60706a; }
+        .badge-low { background: #ffebee; color: #c62828; }
+        .badge-ok { background: #e8f5e9; color: #2e7d32; }
+        .badge-off { background: #eceff1; color: #607d8b; }
+        .stock-stack { display: grid; gap: 5px; text-align: left; }
+        .stock-line { display: flex; justify-content: space-between; gap: 10px; border-radius: 9px; padding: 5px 8px; background: #f7faf8; }
+        .stock-line strong { white-space: nowrap; }
+        .low-stock { background-color: #fff8f8; }
+        .inactive-row { opacity: 0.52; }
+        .mobile-cards { display: none; }
+        .item-card { border: 1px solid #e2e7e4; border-radius: 16px; padding: 14px; background: #fff; box-shadow: 0 3px 14px rgba(0,0,0,0.05); }
+        .item-card + .item-card { margin-top: 12px; }
+        .card-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; margin-bottom: 10px; }
+        .card-title { font-size: 17px; font-weight: 900; color: #24352c; }
+        .card-meta { color: var(--muted); font-size: 13px; margin-top: 4px; }
+        .location-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 10px 0; }
+        .location-tile { background: #f7faf8; border: 1px solid #e2e8e4; border-radius: 12px; padding: 9px; min-height: 66px; }
+        .location-tile .loc { color: #6a786f; font-size: 12px; font-weight: 700; }
+        .location-tile .qty { margin-top: 4px; font-weight: 900; line-height: 1.35; }
+        .log-container { max-height: 220px; overflow-y: auto; background: #fafafa; padding: 10px; font-size: 13px; margin-top: 10px; border: 1px solid #eee; border-radius: 12px; }
+        .log-line { display: grid; grid-template-columns: 150px 1fr; gap: 10px; padding: 8px 0; border-bottom: 1px solid #eee; }
+        .log-line:last-child { border-bottom: 0; }
+        .log-time { color: #8a9690; }
+        .hidden { display: none !important; }
+        .loading-text { text-align: center; padding: 34px; font-size: 18px; color: #666; }
+        body.is-offline button[data-write="true"], body.is-offline input, body.is-offline select, body.is-offline textarea { opacity: 0.55; cursor: not-allowed; }
+        .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.38); display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+        .modal-backdrop.open { display: flex; }
+        .modal { width: min(720px, 100%); max-height: 92vh; overflow: auto; background: #fff; border-radius: 20px; box-shadow: 0 24px 80px rgba(0,0,0,0.22); padding: 18px; }
+        .modal-header { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; border-bottom: 1px solid var(--line-color); padding-bottom: 12px; margin-bottom: 14px; }
+        .modal-title { margin: 0; font-size: 22px; color: var(--primary-dark); }
+        .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+        .form-grid .full { grid-column: 1 / -1; }
+        .field-label { display: block; color: #506059; font-size: 13px; font-weight: 800; margin-bottom: 5px; }
+        .help { color: #7d8a83; font-size: 12px; line-height: 1.5; margin-top: 5px; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+        .admin-banner { background: #fff8e1; border: 1px solid #ffe0a6; border-radius: 14px; padding: 12px; margin-bottom: 14px; color: #6d4c00; line-height: 1.6; }
+        .admin-layout { display: grid; grid-template-columns: 260px 1fr; gap: 14px; }
+        .side-card { background: #f8fbf8; border: 1px solid #e0ebe2; border-radius: 14px; padding: 14px; }
+        .admin-table-wrap { overflow-x: auto; }
+        .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+        .chip { border-radius: 999px; background: #eef5ef; border: 1px solid #d6e5da; padding: 7px 10px; display: inline-flex; gap: 8px; align-items: center; font-size: 13px; }
+        .toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%) translateY(20px); background: #23352b; color: #fff; border-radius: 999px; padding: 10px 16px; opacity: 0; pointer-events: none; transition: all .22s ease; z-index: 200; box-shadow: var(--shadow); }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        @media (max-width: 1000px) {
+            .hero { grid-template-columns: 1fr; position: static; }
+            .header-actions { justify-content: flex-start; }
+            .toolbar { grid-template-columns: 1fr; }
+            .summary-grid { grid-template-columns: repeat(2, 1fr); }
+            .desktop-table { display: none; }
+            .mobile-cards { display: block; }
+            .location-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .admin-layout { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 560px) {
+            .app-shell { padding: 10px; }
+            .panel, .hero { border-radius: 16px; padding: 14px; }
+            .summary-grid { grid-template-columns: 1fr; }
+            .form-grid { grid-template-columns: 1fr; }
+            .location-grid { grid-template-columns: 1fr; }
+            .log-line { grid-template-columns: 1fr; gap: 2px; }
+            .btn, .nav-tab { padding: 10px 13px; }
+            .modal { padding: 14px; }
+        }
+        @media (display-mode: standalone) { .subtitle .pwa-hint { display: none; } }
+    </style>
+</head>
+<body>
+<div class="app-shell">
+    <header class="hero">
+        <div>
+            <h1>🍕 蔡叔叔比薩屋 - 庫存管理 v2</h1>
+            <p class="subtitle">平板優先・手機卡片式・多庫位・支援 g / 包換算・PWA <span class="pwa-hint">｜可加入主畫面</span></p>
+        </div>
+        <div class="header-actions">
+            <div class="sync-status sync-syncing" id="syncStatus"><span class="dot"></span><span id="syncText">同步中…</span></div>
+            <button class="btn btn-ghost btn-small" type="button" onclick="installPwaPrompt()">加入主畫面</button>
+        </div>
+    </header>
+
+    <nav class="nav-tabs" aria-label="主要功能">
+        <button class="nav-tab active" id="tabStock" type="button" onclick="switchView('stock')">庫存操作</button>
+        <button class="nav-tab" id="tabAdmin" type="button" onclick="switchView('admin')">品項管理後台</button>
+    </nav>
+
+    <main id="stockView" class="panel">
+        <div class="alert-box" id="alertBox">
+            <strong style="color:#c62828;">⚠️ 叫貨提醒：</strong> 以下大倉區庫存低於安全線，請安排叫貨。
+            <ul id="alertList"></ul>
+        </div>
+
+        <section class="summary-grid" id="summaryGrid"></section>
+
+        <div class="toolbar">
+            <input id="searchInput" class="search-input" type="search" placeholder="搜尋品項、分類或單位…" oninput="renderInventory()">
+            <div class="chip-row">
+                <label class="chip"><input id="showInactive" type="checkbox" onchange="renderInventory()"> 顯示停用品項</label>
+                <button class="btn btn-secondary btn-small" type="button" onclick="openActionModal(null, 'receive')">快速進貨</button>
+            </div>
+        </div>
+
+        <div class="filter-container" id="filterContainer"></div>
+
+        <div class="desktop-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:8%;">類別</th>
+                        <th style="text-align:left;width:18%;">食材 / 物品</th>
+                        <th style="width:13%;">大倉區</th>
+                        <th style="width:13%;">備貨區</th>
+                        <th style="width:13%;">現場區</th>
+                        <th style="width:12%;">安全線</th>
+                        <th style="width:10%;">狀態</th>
+                        <th style="width:13%;">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="inventoryBody"><tr><td colspan="8" class="loading-text">🔄 正在載入資料庫，請稍候...</td></tr></tbody>
+            </table>
+        </div>
+        <div id="mobileCards" class="mobile-cards"></div>
+
+        <section style="margin-top:26px;border-top:2px dashed #dce3df;padding-top:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+                <strong style="color:#43534b;">🕒 異動日誌</strong>
+                <button class="btn btn-ghost btn-small" data-write="true" type="button" onclick="clearLogs()">清除紀錄</button>
+            </div>
+            <div class="log-container" id="logContainer"></div>
+        </section>
+    </main>
+
+    <main id="adminView" class="panel hidden">
+        <div class="admin-banner">
+            <strong>管理後台說明：</strong> 這版先把安全線、單位換算、分類與停用品項集中在後台，員工操作頁不再能直接修改安全線。<br>
+            目前 PIN 僅是前端防呆，不是正式權限；正式上線請接 Firebase Auth 與 Firestore Rules。
+        </div>
+        <section id="adminLock" class="side-card" style="max-width:520px;">
+            <label class="field-label" for="adminPin">輸入管理 PIN</label>
+            <div style="display:flex;gap:8px;">
+                <input id="adminPin" class="field" type="password" inputmode="numeric" placeholder="預設 1234">
+                <button class="btn btn-primary" type="button" onclick="unlockAdmin()">進入</button>
+            </div>
+            <div class="help">正式版請不要使用前端 PIN，這只是避免員工誤觸設定。</div>
+        </section>
+
+        <section id="adminContent" class="hidden">
+            <div class="admin-layout">
+                <aside class="side-card">
+                    <h3 style="margin-top:0;color:var(--primary-dark);">分類管理</h3>
+                    <div class="chip-row" id="categoryChips"></div>
+                    <div style="display:flex;gap:8px;margin-top:12px;">
+                        <input id="newCategoryInput" class="field" type="text" placeholder="新增分類">
+                        <button class="btn btn-primary btn-small" data-write="true" type="button" onclick="addCategory()">新增</button>
+                    </div>
+                    <hr style="border:0;border-top:1px solid #e0e4e2;margin:16px 0;">
+                    <h3 style="color:var(--primary-dark);">單位設計原則</h3>
+                    <p class="help">每個品項可以設定「基準單位」與「顯示單位」。例如豬肉基準單位為 g，顯示單位為包，800g = 1包；員工可輸入 400g 或 0.5包。</p>
+                </aside>
+                <section>
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+                        <h2 style="margin:0;color:var(--primary-dark);">品項管理</h2>
+                        <button class="btn btn-primary" data-write="true" type="button" onclick="openItemEditor()">＋ 新增品項</button>
+                    </div>
+                    <div class="admin-table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>排序</th>
+                                    <th style="text-align:left;">品項</th>
+                                    <th>單位換算</th>
+                                    <th>安全線</th>
+                                    <th>預設入庫</th>
+                                    <th>狀態</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminItemBody"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </section>
+    </main>
+</div>
+
+<div class="modal-backdrop" id="actionModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="actionModalTitle">
+        <div class="modal-header">
+            <div>
+                <h2 class="modal-title" id="actionModalTitle">庫存操作</h2>
+                <div class="help" id="actionModalSub"></div>
+            </div>
+            <button class="btn btn-ghost btn-small" type="button" onclick="closeModal('actionModal')">關閉</button>
+        </div>
+        <form onsubmit="submitStockAction(event)">
+            <div class="form-grid">
+                <label class="full">
+                    <span class="field-label">品項</span>
+                    <select id="actionItemId" required onchange="refreshActionModalByItem()"></select>
+                </label>
+                <label>
+                    <span class="field-label">操作類型</span>
+                    <select id="actionType" required onchange="refreshActionFields()">
+                        <option value="receive">進貨入庫</option>
+                        <option value="move">移倉 / 備貨 / 退回</option>
+                        <option value="consume">現場消耗</option>
+                        <option value="waste">報廢 / 盤點扣減</option>
+                    </select>
+                </label>
+                <label>
+                    <span class="field-label">數量</span>
+                    <div style="display:grid;grid-template-columns:1fr 110px;gap:8px;">
+                        <input id="actionQty" class="field" type="number" min="0" step="any" inputmode="decimal" placeholder="例如 0.5 或 400" required>
+                        <select id="actionUnit"></select>
+                    </div>
+                    <div class="help" id="unitHelp"></div>
+                </label>
+                <label id="fromWrap">
+                    <span class="field-label">來源庫位</span>
+                    <select id="fromLocation"></select>
+                </label>
+                <label id="toWrap">
+                    <span class="field-label">目的庫位</span>
+                    <select id="toLocation"></select>
+                </label>
+                <label class="full">
+                    <span class="field-label">備註，選填</span>
+                    <input id="actionNote" class="field" type="text" placeholder="例如：備貨剩餘退回、盤點修正、叫貨到貨">
+                </label>
+            </div>
+            <div id="modalStockPreview" class="location-grid" style="margin-top:14px;"></div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" type="button" onclick="closeModal('actionModal')">取消</button>
+                <button class="btn btn-primary" data-write="true" type="submit">確認寫入</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-backdrop" id="itemModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="itemModalTitle">
+        <div class="modal-header">
+            <h2 class="modal-title" id="itemModalTitle">新增品項</h2>
+            <button class="btn btn-ghost btn-small" type="button" onclick="closeModal('itemModal')">關閉</button>
+        </div>
+        <form onsubmit="saveItemFromForm(event)">
+            <input id="editItemId" type="hidden">
+            <div class="form-grid">
+                <label>
+                    <span class="field-label">品項名稱</span>
+                    <input id="editName" class="field" type="text" required placeholder="例如 豬絞肉（熟）">
+                </label>
+                <label>
+                    <span class="field-label">分類</span>
+                    <input id="editCategory" class="field" list="categoryList" type="text" required placeholder="例如 肉類">
+                    <datalist id="categoryList"></datalist>
+                </label>
+                <label>
+                    <span class="field-label">顯示單位</span>
+                    <input id="editDisplayUnit" class="field" type="text" required placeholder="例如 包、桶、盒、兩">
+                </label>
+                <label>
+                    <span class="field-label">基準單位</span>
+                    <input id="editBaseUnit" class="field" type="text" required placeholder="例如 g、ml、包、兩">
+                </label>
+                <label>
+                    <span class="field-label">換算：多少基準單位 = 1 顯示單位</span>
+                    <input id="editBasePerDisplay" class="field" type="number" min="0.0001" step="any" required placeholder="例如 800">
+                    <div class="help">若 800g = 1包，請填 800；若不用換算，填 1。</div>
+                </label>
+                <label>
+                    <span class="field-label">安全線，依顯示單位</span>
+                    <input id="editThresholdDisplay" class="field" type="number" min="0" step="any" required placeholder="例如 5">
+                </label>
+                <label>
+                    <span class="field-label">預設進貨庫位</span>
+                    <select id="editDefaultReceive"></select>
+                </label>
+                <label>
+                    <span class="field-label">預設消耗庫位</span>
+                    <select id="editDefaultIssue"></select>
+                </label>
+                <label>
+                    <span class="field-label">排序</span>
+                    <input id="editSortOrder" class="field" type="number" step="1" placeholder="數字越小越前面">
+                </label>
+                <label>
+                    <span class="field-label">狀態</span>
+                    <select id="editActive">
+                        <option value="true">啟用</option>
+                        <option value="false">停用</option>
+                    </select>
+                </label>
+                <div class="full">
+                    <span class="field-label">允許使用的庫位</span>
+                    <div class="chip-row" id="editAllowedLocations"></div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" type="button" onclick="closeModal('itemModal')">取消</button>
+                <button class="btn btn-primary" data-write="true" type="submit">儲存品項</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { doc, setDoc, onSnapshot, runTransaction, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD14l_VDz03TCD6AwjGF6Oa5nrEqX1LWIk",
+        authDomain: "inv3-84f00.firebaseapp.com",
+        databaseURL: "https://inv3-84f00-default-rtdb.firebaseio.com",
+        projectId: "inv3-84f00",
+        storageBucket: "inv3-84f00.firebasestorage.app",
+        messagingSenderId: "328169054973",
+        appId: "1:328169054973:web:f23bb36d266b7719eed494"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = initializeFirestore(app, {
+        experimentalAutoDetectLongPolling: true,
+        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+    });
+    const docRef = doc(db, "inventory", "mainStore");
+
+    const LEGACY_DEFAULT_DATA = [
+        { id: 1, category: "肉類", name: "豬絞肉 (熟/800g包)", freezerStock: 10, chillerStock: 2, threshold: 5, unit: "包" },
+        { id: 80, category: "肉類", name: "豬絞肉 (生/800g包)", freezerStock: 10, chillerStock: 2, threshold: 5, unit: "包" },
+        { id: 2, category: "肉類", name: "牛絞肉 (熟/800g包)", freezerStock: 4, chillerStock: 1, threshold: 5, unit: "包" },
+        { id: 81, category: "肉類", name: "牛絞肉 (生/800g包)", freezerStock: 4, chillerStock: 1, threshold: 5, unit: "包" },
+        { id: 3, category: "海鮮", name: "蝦仁 (熟/800g包)", freezerStock: 8, chillerStock: 3, threshold: 4, unit: "包" },
+        { id: 82, category: "海鮮", name: "蝦仁 (生/800g包)", freezerStock: 8, chillerStock: 3, threshold: 4, unit: "包" },
+        { id: 4, category: "海鮮", name: "透抽 (熟/800g包)", freezerStock: 2, chillerStock: 1, threshold: 3, unit: "包" },
+        { id: 83, category: "海鮮", name: "透抽 (生/800g包)", freezerStock: 2, chillerStock: 1, threshold: 3, unit: "包" },
+        { id: 5, category: "海鮮", name: "珠貝 (熟/500g包)", freezerStock: 6, chillerStock: 2, threshold: 3, unit: "包" },
+        { id: 84, category: "海鮮", name: "珠貝 (生/500g包)", freezerStock: 6, chillerStock: 2, threshold: 3, unit: "包" },
+        { id: 60, category: "海鮮", name: "蟹味棒", freezerStock: 5, chillerStock: 2, threshold: 3, unit: "包" },
+        { id: 6, category: "臘腸", name: "大臘腸", freezerStock: 15, chillerStock: 4, threshold: 6, unit: "包" },
+        { id: 7, category: "臘腸", name: "小臘腸", freezerStock: 5, chillerStock: 2, threshold: 4, unit: "袋" },
+        { id: 61, category: "臘腸", name: "火腿", freezerStock: 6, chillerStock: 2, threshold: 4, unit: "包" },
+        { id: 8, category: "薯條起司", name: "薯條", freezerStock: 3, chillerStock: 1, threshold: 5, unit: "袋" },
+        { id: 9, category: "薯條起司", name: "莫扎瑞拉", freezerStock: 8, chillerStock: 2, threshold: 4, unit: "包" },
+        { id: 62, category: "薯條起司", name: "起司", freezerStock: 8, chillerStock: 2, threshold: 4, unit: "包" },
+        { id: 10, category: "蔬菜", name: "番茄", freezerStock: 20, chillerStock: 5, threshold: 15, unit: "顆" },
+        { id: 11, category: "蔬菜", name: "洋蔥", freezerStock: 15, chillerStock: 4, threshold: 10, unit: "顆" },
+        { id: 12, category: "蔬菜", name: "青椒", freezerStock: 5, chillerStock: 2, threshold: 6, unit: "條" },
+        { id: 13, category: "蔬菜", name: "九層塔", freezerStock: 10, chillerStock: 2, threshold: 5, unit: "兩" },
+        { id: 14, category: "罐頭類", name: "鳳梨", freezerStock: 12, chillerStock: 2, threshold: 5, unit: "罐" },
+        { id: 15, category: "罐頭類", name: "玉米", freezerStock: 12, chillerStock: 2, threshold: 5, unit: "罐" },
+        { id: 16, category: "罐頭類", name: "洋菇", freezerStock: 12, chillerStock: 2, threshold: 5, unit: "罐" },
+        { id: 17, category: "罐頭類", name: "黑橄欖", freezerStock: 12, chillerStock: 2, threshold: 5, unit: "罐" },
+        { id: 70, category: "飲料", name: "茶葉", freezerStock: 10, chillerStock: 2, threshold: 3, unit: "包" },
+        { id: 71, category: "飲料", name: "小美冰淇淋", freezerStock: 10, chillerStock: 2, threshold: 3, unit: "桶" },
+        { id: 72, category: "飲料", name: "K冰淇淋", freezerStock: 10, chillerStock: 2, threshold: 3, unit: "盒" },
+        { id: 73, category: "飲料", name: "冷凍草莓", freezerStock: 10, chillerStock: 2, threshold: 3, unit: "包" },
+        { id: 74, category: "飲料", name: "可可粉", freezerStock: 10, chillerStock: 2, threshold: 3, unit: "包" },
+        { id: 75, category: "飲料", name: "鮮奶", freezerStock: 10, chillerStock: 2, threshold: 3, unit: "瓶" },
+        { id: 18, category: "粉", name: "鬆厚預拌粉", freezerStock: 10, chillerStock: 2, threshold: 5, unit: "包" },
+        { id: 19, category: "粉", name: "薄脆預拌粉", freezerStock: 10, chillerStock: 2, threshold: 5, unit: "包" },
+        { id: 20, category: "粉", name: "比薩香料粉", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "包" },
+        { id: 21, category: "粉", name: "義式香腸粉", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "包" },
+        { id: 22, category: "粉", name: "雞肉醃漬粉", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "包" },
+        { id: 23, category: "粉", name: "雞肉裹粉P100", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "包" },
+        { id: 24, category: "粉", name: "雞肉裹粉Q50", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "包" },
+        { id: 25, category: "粉", name: "雞肉裹粉R0", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "包" },
+        { id: 26, category: "醬料", name: "番茄醬 (袋裝)", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "袋" },
+        { id: 27, category: "醬料", name: "番茄醬 (瓶裝)", freezerStock: 10, chillerStock: 2, threshold: 5, unit: "瓶" },
+        { id: 28, category: "醬料", name: "Tabasco", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "瓶" },
+        { id: 29, category: "醬料", name: "BB辣椒醬", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "瓶" },
+        { id: 30, category: "外帶醬料", name: "外帶番茄醬", freezerStock: 50, chillerStock: 10, threshold: 20, unit: "袋" },
+        { id: 31, category: "外帶醬料", name: "外帶黑胡椒", freezerStock: 50, chillerStock: 10, threshold: 20, unit: "袋" },
+        { id: 32, category: "外帶醬料", name: "外帶乾辣椒", freezerStock: 50, chillerStock: 10, threshold: 20, unit: "袋" },
+        { id: 33, category: "外帶醬料", name: "外帶辣椒粉", freezerStock: 50, chillerStock: 10, threshold: 20, unit: "袋" },
+        { id: 34, category: "包材", name: "12吋比薩盒", freezerStock: 20, chillerStock: 5, threshold: 10, unit: "包" },
+        { id: 35, category: "包材", name: "9吋比薩盒", freezerStock: 20, chillerStock: 5, threshold: 10, unit: "包" },
+        { id: 36, category: "包材", name: "比薩紙", freezerStock: 15, chillerStock: 3, threshold: 5, unit: "包" },
+        { id: 37, category: "包材", name: "大炸雞盒", freezerStock: 10, chillerStock: 2, threshold: 3, unit: "箱" },
+        { id: 38, category: "包材", name: "小炸雞盒", freezerStock: 10, chillerStock: 2, threshold: 3, unit: "箱" },
+        { id: 39, category: "包材", name: "吸油紙", freezerStock: 15, chillerStock: 3, threshold: 5, unit: "包" },
+        { id: 40, category: "包材", name: "冷飲杯+蓋", freezerStock: 30, chillerStock: 5, threshold: 10, unit: "條" },
+        { id: 41, category: "包材", name: "熱飲杯+蓋", freezerStock: 30, chillerStock: 5, threshold: 10, unit: "條" },
+        { id: 42, category: "包材", name: "大背心提袋", freezerStock: 20, chillerStock: 5, threshold: 5, unit: "包" },
+        { id: 43, category: "包材", name: "中背心提袋", freezerStock: 20, chillerStock: 5, threshold: 5, unit: "包" },
+        { id: 44, category: "包材", name: "小背心提袋", freezerStock: 20, chillerStock: 5, threshold: 5, unit: "包" },
+        { id: 45, category: "包材", name: "2杯架", freezerStock: 10, chillerStock: 2, threshold: 3, unit: "包" },
+        { id: 46, category: "包材", name: "4杯架", freezerStock: 10, chillerStock: 2, threshold: 3, unit: "包" },
+        { id: 47, category: "衛生用品", name: "廚房紙巾", freezerStock: 10, chillerStock: 2, threshold: 3, unit: "袋" },
+        { id: 48, category: "衛生用品", name: "烘培紙", freezerStock: 8, chillerStock: 2, threshold: 3, unit: "條" },
+        { id: 49, category: "衛生用品", name: "桌上衛生紙", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "箱" },
+        { id: 50, category: "衛生用品", name: "折疊紙巾", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "箱" },
+        { id: 51, category: "衛生用品", name: "捲筒衛生紙", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "箱" },
+        { id: 52, category: "衛生用品", name: "濕紙巾", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "箱" },
+        { id: 53, category: "衛生用品", name: "廚房手套S", freezerStock: 6, chillerStock: 2, threshold: 2, unit: "盒" },
+        { id: 54, category: "衛生用品", name: "廚房手套", freezerStock: 6, chillerStock: 2, threshold: 2, unit: "盒" },
+        { id: 55, category: "衛生用品", name: "一次性手套", freezerStock: 10, chillerStock: 2, threshold: 3, unit: "袋" },
+        { id: 56, category: "清潔用品", name: "地板清潔劑", freezerStock: 3, chillerStock: 1, threshold: 1, unit: "桶" },
+        { id: 57, category: "清潔用品", name: "洗碗精", freezerStock: 4, chillerStock: 1, threshold: 1, unit: "桶" },
+        { id: 58, category: "清潔用品", name: "洗手乳", freezerStock: 4, chillerStock: 1, threshold: 1, unit: "桶" },
+        { id: 59, category: "清潔用品", name: "洗手液", freezerStock: 4, chillerStock: 1, threshold: 1, unit: "桶" }
+    ];
+
+    const SCHEMA_VERSION = 2;
+    const ADMIN_PIN = "1234";
+    const WAREHOUSE_KEYS = ["warehouseFrozen", "warehouseChilled", "warehouseRoom"];
+    const ONSITE_KEYS = ["onsiteChilled", "onsiteRoom"];
+    const LOCATION_DEFS = {
+        warehouseFrozen: { id: "warehouseFrozen", name: "大倉冷凍", short: "冷凍", group: "大倉" },
+        warehouseChilled: { id: "warehouseChilled", name: "大倉冷藏", short: "冷藏", group: "大倉" },
+        warehouseRoom: { id: "warehouseRoom", name: "大倉常溫", short: "常溫", group: "大倉" },
+        prep: { id: "prep", name: "備貨區", short: "備貨", group: "備貨" },
+        onsiteChilled: { id: "onsiteChilled", name: "現場冷藏", short: "現場冷藏", group: "現場" },
+        onsiteRoom: { id: "onsiteRoom", name: "現場常溫", short: "現場常溫", group: "現場" }
+    };
+
+    let inventoryData = [];
+    let logs = [];
+    let settings = { categories: [], locations: Object.values(LOCATION_DEFS) };
+    let currentCategoryFilter = "全部";
+    let isOffline = false;
+    let isAdmin = sessionStorage.getItem("inventoryAdminUnlocked") === "true";
+    let deferredInstallPrompt = null;
+
+    function setSyncStatus(state) {
+        const el = document.getElementById("syncStatus");
+        const txt = document.getElementById("syncText");
+        if (!el || !txt) return;
+        el.classList.remove("sync-syncing", "sync-synced", "sync-failed");
+        if (state === "syncing") {
+            el.classList.add("sync-syncing"); txt.textContent = "同步中…";
+        } else if (state === "synced") {
+            el.classList.add("sync-synced"); txt.textContent = "✓ 已同步";
+        } else {
+            el.classList.add("sync-failed"); txt.textContent = "⚠ 連線失敗，僅供檢視";
+        }
+    }
+
+    function setLocked(locked) {
+        if (locked === isOffline) return;
+        isOffline = locked;
+        document.body.classList.toggle("is-offline", locked);
+        renderAll();
+    }
+
+    function guardOnline() {
+        if (isOffline) {
+            alert("⚠️ 目前與雲端連線失敗，無法編輯。\n請確認網路後重試，以免庫存沒有真正寫入。");
+            return false;
+        }
+        return true;
+    }
+
+    function normalizeNumber(v, fallback = 0) {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : fallback;
+    }
+
+    function inferUnitProfile(item) {
+        const unit = item.unit || item.displayUnit || "個";
+        const name = item.name || "";
+        const m = name.match(/(\d+(?:\.\d+)?)\s*(g|ml|公克|毫升)\s*(?:包|袋|瓶|盒|桶)?/i);
+        if (m) {
+            const baseUnit = m[2].toLowerCase().includes("ml") || m[2].includes("毫") ? "ml" : "g";
+            return { displayUnit: unit, baseUnit, basePerDisplay: normalizeNumber(m[1], 1), allowBaseInput: true };
+        }
+        return { displayUnit: unit, baseUnit: unit, basePerDisplay: 1, allowBaseInput: false };
+    }
+
+    function inferDefaultLocations(item) {
+        const cat = item.category || "其他";
+        const name = item.name || "";
+        if (["肉類", "海鮮", "臘腸", "薯條起司"].includes(cat) || /冷凍|冰淇淋|草莓/.test(name)) {
+            return { receive: "warehouseFrozen", issue: "onsiteChilled", allowed: ["warehouseFrozen", "prep", "onsiteChilled"] };
+        }
+        if (cat === "蔬菜" || /鮮奶/.test(name)) {
+            return { receive: "warehouseChilled", issue: "onsiteChilled", allowed: ["warehouseChilled", "prep", "onsiteChilled"] };
+        }
+        return { receive: "warehouseRoom", issue: "onsiteRoom", allowed: ["warehouseRoom", "prep", "onsiteRoom"] };
+    }
+
+    function normalizeItem(raw, index = 0) {
+        const item = { ...raw };
+        const unitProfile = inferUnitProfile(item);
+        item.id = item.id ?? Date.now() + index;
+        item.category = item.category || "未分類";
+        item.name = item.name || "未命名品項";
+        item.active = item.active !== false;
+        item.sortOrder = normalizeNumber(item.sortOrder, index + 1);
+        item.displayUnit = item.displayUnit || unitProfile.displayUnit;
+        item.baseUnit = item.baseUnit || unitProfile.baseUnit;
+        item.basePerDisplay = normalizeNumber(item.basePerDisplay, unitProfile.basePerDisplay || 1);
+        item.allowBaseInput = item.allowBaseInput ?? unitProfile.allowBaseInput;
+        const locationMeta = inferDefaultLocations(item);
+        item.defaultReceiveLocation = item.defaultReceiveLocation || locationMeta.receive;
+        item.defaultIssueLocation = item.defaultIssueLocation || locationMeta.issue;
+        item.allowedLocations = Array.isArray(item.allowedLocations) && item.allowedLocations.length ? item.allowedLocations : locationMeta.allowed;
+        item.locations = { ...(item.locations || {}) };
+        Object.keys(LOCATION_DEFS).forEach(key => {
+            item.locations[key] = normalizeNumber(item.locations[key], 0);
+        });
+        if (!raw.locations) {
+            const freezerBase = normalizeNumber(raw.freezerStock, 0) * item.basePerDisplay;
+            const chillerBase = normalizeNumber(raw.chillerStock, 0) * item.basePerDisplay;
+            item.locations[item.defaultReceiveLocation] = normalizeNumber(item.locations[item.defaultReceiveLocation], 0) + freezerBase;
+            item.locations[item.defaultIssueLocation] = normalizeNumber(item.locations[item.defaultIssueLocation], 0) + chillerBase;
+        }
+        const thresholdDisplay = raw.thresholdDisplay ?? raw.threshold ?? 0;
+        item.thresholdDisplay = normalizeNumber(thresholdDisplay, 0);
+        item.thresholdBase = normalizeNumber(item.thresholdBase, item.thresholdDisplay * item.basePerDisplay);
+        item.threshold = item.thresholdDisplay; // 舊版相容欄位
+        updateLegacyStockFields(item);
+        return item;
+    }
+
+    function normalizeItems(items) {
+        return (items || []).map(normalizeItem).sort((a,b) => (a.sortOrder - b.sortOrder) || String(a.name).localeCompare(String(b.name), "zh-Hant"));
+    }
+
+    function updateLegacyStockFields(item) {
+        const warehouseBase = sumLocations(item, WAREHOUSE_KEYS);
+        const onsiteBase = sumLocations(item, ONSITE_KEYS);
+        item.freezerStock = toDisplayQty(item, warehouseBase);
+        item.chillerStock = toDisplayQty(item, onsiteBase);
+        item.unit = item.displayUnit;
+        return item;
+    }
+
+    function sumLocations(item, keys) {
+        return keys.reduce((sum, key) => sum + normalizeNumber(item.locations?.[key], 0), 0);
+    }
+
+    function getAllCategories() {
+        const set = new Set(["全部"]);
+        (settings.categories || []).forEach(c => c && set.add(c));
+        inventoryData.forEach(i => i.category && set.add(i.category));
+        return [...set];
+    }
+
+    function toDisplayQty(item, baseQty) {
+        const per = normalizeNumber(item.basePerDisplay, 1) || 1;
+        return roundQty(baseQty / per);
+    }
+
+    function roundQty(n) {
+        return parseFloat((normalizeNumber(n, 0)).toFixed(3));
+    }
+
+    function formatQty(item, baseQty, options = {}) {
+        const base = roundQty(baseQty);
+        const display = toDisplayQty(item, baseQty);
+        if (item.baseUnit !== item.displayUnit && item.basePerDisplay !== 1) {
+            if (options.compact) return `${display} ${item.displayUnit}`;
+            return `${display} ${item.displayUnit} / ${base} ${item.baseUnit}`;
+        }
+        return `${base} ${item.baseUnit}`;
+    }
+
+    function qtyToBase(item, val, unit) {
+        const n = normalizeNumber(val, NaN);
+        if (!Number.isFinite(n) || n <= 0) return NaN;
+        if (unit === item.displayUnit && item.displayUnit !== item.baseUnit) return n * item.basePerDisplay;
+        return n;
+    }
+
+    function escapeHtml(str) {
+        return String(str ?? "").replace(/[&<>'"]/g, s => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[s]));
+    }
+
+    function showToast(text) {
+        const toast = document.getElementById("toast");
+        toast.textContent = text;
+        toast.classList.add("show");
+        window.clearTimeout(showToast._timer);
+        showToast._timer = window.setTimeout(() => toast.classList.remove("show"), 2200);
+    }
+
+    onSnapshot(docRef, { includeMetadataChanges: true }, (docSnap) => {
+        setLocked(false);
+        const meta = docSnap.metadata;
+        setSyncStatus(meta.hasPendingWrites || meta.fromCache ? "syncing" : "synced");
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            settings = { categories: [], locations: Object.values(LOCATION_DEFS), ...(data.settings || {}) };
+            const cloudItems = normalizeItems(data.items || []);
+            const existingIds = new Set(cloudItems.map(i => i.id));
+            const missingItems = LEGACY_DEFAULT_DATA.filter(def => !existingIds.has(def.id)).map((def, idx) => normalizeItem(def, cloudItems.length + idx));
+            inventoryData = normalizeItems([...cloudItems, ...missingItems]);
+            logs = Array.isArray(data.logs) ? data.logs : [];
+            if (missingItems.length > 0 && !meta.fromCache && !meta.hasPendingWrites) {
+                runStockTransaction((items) => {
+                    const normalized = normalizeItems(items);
+                    const ids = new Set(normalized.map(i => i.id));
+                    const toAdd = LEGACY_DEFAULT_DATA.filter(def => !ids.has(def.id)).map((def, idx) => normalizeItem(def, normalized.length + idx));
+                    if (!toAdd.length) return false;
+                    items.length = 0;
+                    normalizeItems([...normalized, ...toAdd]).forEach(i => items.push(i));
+                }, { silent: true });
+            }
+        } else {
+            inventoryData = normalizeItems(LEGACY_DEFAULT_DATA);
+            settings = { categories: getAllCategories().filter(c => c !== "全部"), locations: Object.values(LOCATION_DEFS) };
+            saveWholeDocument();
+        }
+        renderAll();
+    }, (error) => {
+        console.error("讀取資料失敗:", error);
+        setSyncStatus("failed");
+        setLocked(true);
+        if (inventoryData.length === 0) {
+            document.getElementById("inventoryBody").innerHTML = `<tr><td colspan="8" class="loading-text" style="color:red;">❌ 無法連接到資料庫，請檢查網路。</td></tr>`;
+        }
+    });
+
+    function saveWholeDocument() {
+        const items = normalizeItems(inventoryData).map(updateLegacyStockFields);
+        setDoc(docRef, {
+            schemaVersion: SCHEMA_VERSION,
+            items,
+            logs,
+            settings: { ...settings, categories: getAllCategories().filter(c => c !== "全部") },
+            lastUpdated: new Date().toISOString()
+        }).catch(error => alert("資料儲存遇到問題，請稍後再試：" + error.message));
+    }
+
+    async function runStockTransaction(mutate, options = {}) {
+        if (!guardOnline()) return;
+        try {
+            await runTransaction(db, async (tx) => {
+                const snap = await tx.get(docRef);
+                const data = snap.exists() ? snap.data() : { items: [], logs: [], settings: {} };
+                const items = normalizeItems(data.items && data.items.length ? data.items : LEGACY_DEFAULT_DATA);
+                let txLogs = Array.isArray(data.logs) ? [...data.logs] : [];
+                const txSettings = { categories: [], locations: Object.values(LOCATION_DEFS), ...(data.settings || {}) };
+                const result = mutate(items, txLogs, txSettings);
+                if (result === false) return;
+                items.forEach(updateLegacyStockFields);
+                if (txLogs.length > 100) txLogs = txLogs.slice(0, 100);
+                tx.set(docRef, {
+                    schemaVersion: SCHEMA_VERSION,
+                    items: normalizeItems(items),
+                    logs: txLogs,
+                    settings: txSettings,
+                    lastUpdated: new Date().toISOString()
+                });
+            });
+            if (!options.silent) showToast("已寫入並同步庫存");
+        } catch (error) {
+            alert("操作未完成（可能因其他裝置同時操作），請再試一次：" + error.message);
+        }
+    }
+
+    function pushLog(txLogs, text, meta = {}) {
+        const now = new Date();
+        txLogs.unshift({
+            id: `${now.getTime()}-${Math.random().toString(36).slice(2, 8)}`,
+            time: now.toLocaleString("zh-TW", { hour12: false }),
+            text,
+            ...meta
+        });
+    }
+
+    function filteredItems() {
+        const q = document.getElementById("searchInput")?.value.trim().toLowerCase() || "";
+        const showInactive = document.getElementById("showInactive")?.checked || false;
+        return inventoryData.filter(item => {
+            if (!showInactive && item.active === false) return false;
+            if (currentCategoryFilter !== "全部" && item.category !== currentCategoryFilter) return false;
+            if (!q) return true;
+            return [item.name, item.category, item.displayUnit, item.baseUnit].join(" ").toLowerCase().includes(q);
+        });
+    }
+
+    function renderAll() {
+        renderFilters();
+        renderInventory();
+        renderAdmin();
+    }
+
+    function renderFilters() {
+        const wrap = document.getElementById("filterContainer");
+        if (!wrap) return;
+        const cats = getAllCategories();
+        if (!cats.includes(currentCategoryFilter)) currentCategoryFilter = "全部";
+        wrap.innerHTML = cats.map(cat => `<button class="filter-btn ${cat === currentCategoryFilter ? "active" : ""}" type="button" onclick="filterCategory('${escapeHtml(cat)}')">${escapeHtml(cat)}</button>`).join("");
+        const datalist = document.getElementById("categoryList");
+        if (datalist) datalist.innerHTML = cats.filter(c => c !== "全部").map(c => `<option value="${escapeHtml(c)}"></option>`).join("");
+    }
+
+    function lowStockItems() {
+        return inventoryData.filter(item => item.active !== false && sumLocations(item, WAREHOUSE_KEYS) <= item.thresholdBase);
+    }
+
+    function renderSummary() {
+        const activeItems = inventoryData.filter(i => i.active !== false);
+        const lowCount = lowStockItems().length;
+        const prepCount = activeItems.filter(i => normalizeNumber(i.locations?.prep, 0) > 0).length;
+        const inactiveCount = inventoryData.length - activeItems.length;
+        document.getElementById("summaryGrid").innerHTML = `
+            <div class="summary-card"><div class="label">啟用品項</div><div class="value">${activeItems.length}</div></div>
+            <div class="summary-card"><div class="label">低庫存提醒</div><div class="value">${lowCount}</div></div>
+            <div class="summary-card"><div class="label">備貨區有庫存</div><div class="value">${prepCount}</div></div>
+            <div class="summary-card"><div class="label">停用品項</div><div class="value">${inactiveCount}</div></div>`;
+    }
+
+    function renderInventory() {
+        renderSummary();
+        const tbody = document.getElementById("inventoryBody");
+        const mobile = document.getElementById("mobileCards");
+        const alertBox = document.getElementById("alertBox");
+        const alertList = document.getElementById("alertList");
+        const items = filteredItems();
+        const lows = lowStockItems();
+        if (lows.length > 0) {
+            alertList.innerHTML = lows.map(item => `<li>【${escapeHtml(item.category)}】${escapeHtml(item.name)}：大倉區剩餘 <strong>${formatQty(item, sumLocations(item, WAREHOUSE_KEYS))}</strong>，安全線 ${formatQty(item, item.thresholdBase)}</li>`).join("");
+            alertBox.style.display = "block";
+        } else {
+            alertBox.style.display = "none";
+        }
+        if (!items.length) {
+            tbody.innerHTML = `<tr><td colspan="8" class="loading-text">沒有符合條件的品項</td></tr>`;
+            mobile.innerHTML = `<div class="loading-text">沒有符合條件的品項</div>`;
+            renderLogs();
+            return;
+        }
+        tbody.innerHTML = items.map(renderTableRow).join("");
+        mobile.innerHTML = items.map(renderMobileCard).join("");
+        renderLogs();
+    }
+
+    function renderTableRow(item) {
+        const warehouseBase = sumLocations(item, WAREHOUSE_KEYS);
+        const prepBase = normalizeNumber(item.locations?.prep, 0);
+        const onsiteBase = sumLocations(item, ONSITE_KEYS);
+        const isLow = item.active !== false && warehouseBase <= item.thresholdBase;
+        return `
+            <tr class="${isLow ? "low-stock" : ""} ${item.active === false ? "inactive-row" : ""}">
+                <td><span class="badge badge-muted">${escapeHtml(item.category)}</span></td>
+                <td class="name-cell"><strong>${escapeHtml(item.name)}</strong><div class="help">${escapeHtml(item.basePerDisplay)} ${escapeHtml(item.baseUnit)} = 1 ${escapeHtml(item.displayUnit)}</div></td>
+                <td>${renderLocationStack(item, WAREHOUSE_KEYS)}</td>
+                <td>${renderLocationStack(item, ["prep"])}</td>
+                <td>${renderLocationStack(item, ONSITE_KEYS)}</td>
+                <td><strong>${formatQty(item, item.thresholdBase, { compact: true })}</strong></td>
+                <td>${item.active === false ? '<span class="badge badge-off">停用</span>' : isLow ? '<span class="badge badge-low">⚠️ 補貨</span>' : '<span class="badge badge-ok">✅ 充足</span>'}</td>
+                <td><button class="btn btn-primary btn-small" type="button" onclick="openActionModal(${item.id})">操作</button></td>
+            </tr>`;
+    }
+
+    function renderLocationStack(item, keys) {
+        return `<div class="stock-stack">${keys.map(key => `<div class="stock-line"><span>${LOCATION_DEFS[key].short}</span><strong>${formatQty(item, normalizeNumber(item.locations?.[key], 0), { compact: true })}</strong></div>`).join("")}</div>`;
+    }
+
+    function renderMobileCard(item) {
+        const warehouseBase = sumLocations(item, WAREHOUSE_KEYS);
+        const isLow = item.active !== false && warehouseBase <= item.thresholdBase;
+        const locKeys = [...WAREHOUSE_KEYS, "prep", ...ONSITE_KEYS].filter(key => item.allowedLocations.includes(key) || normalizeNumber(item.locations?.[key], 0) > 0);
+        return `
+            <article class="item-card ${item.active === false ? "inactive-row" : ""}">
+                <div class="card-head">
+                    <div><div class="card-title">${escapeHtml(item.name)}</div><div class="card-meta">${escapeHtml(item.category)}｜${escapeHtml(item.basePerDisplay)} ${escapeHtml(item.baseUnit)} = 1 ${escapeHtml(item.displayUnit)}</div></div>
+                    ${item.active === false ? '<span class="badge badge-off">停用</span>' : isLow ? '<span class="badge badge-low">補貨</span>' : '<span class="badge badge-ok">充足</span>'}
+                </div>
+                <div class="location-grid">${locKeys.map(key => `<div class="location-tile"><div class="loc">${LOCATION_DEFS[key].name}</div><div class="qty">${formatQty(item, normalizeNumber(item.locations?.[key], 0))}</div></div>`).join("")}</div>
+                <button class="btn btn-primary" type="button" onclick="openActionModal(${item.id})">操作</button>
+            </article>`;
+    }
+
+    function renderLogs() {
+        const container = document.getElementById("logContainer");
+        if (!logs.length) {
+            container.innerHTML = '<div style="text-align:center;color:#9aa6a0;">暫無紀錄</div>';
+            return;
+        }
+        container.innerHTML = logs.slice(0, 80).map(l => `<div class="log-line"><span class="log-time">${escapeHtml(l.time || "")}</span><span>${escapeHtml(l.text || "")}</span></div>`).join("");
+    }
+
+    window.filterCategory = function(cat) {
+        currentCategoryFilter = cat;
+        renderInventory();
+        renderFilters();
+    };
+
+    window.switchView = function(view) {
+        document.getElementById("stockView").classList.toggle("hidden", view !== "stock");
+        document.getElementById("adminView").classList.toggle("hidden", view !== "admin");
+        document.getElementById("tabStock").classList.toggle("active", view === "stock");
+        document.getElementById("tabAdmin").classList.toggle("active", view === "admin");
+        if (view === "admin") renderAdmin();
+    };
+
+    function activeItemOptions(selectedId) {
+        return inventoryData.filter(i => i.active !== false).map(item => `<option value="${item.id}" ${String(item.id) === String(selectedId) ? "selected" : ""}>${escapeHtml(item.category)}｜${escapeHtml(item.name)}</option>`).join("");
+    }
+
+    window.openActionModal = function(itemId = null, actionType = "move") {
+        const activeItems = inventoryData.filter(i => i.active !== false);
+        if (!activeItems.length) return alert("目前沒有可操作的品項。");
+        const selectedId = itemId ?? activeItems[0].id;
+        document.getElementById("actionItemId").innerHTML = activeItemOptions(selectedId);
+        document.getElementById("actionType").value = actionType || "move";
+        document.getElementById("actionQty").value = "";
+        document.getElementById("actionNote").value = "";
+        refreshActionModalByItem();
+        openModal("actionModal");
+    };
+
+    window.refreshActionModalByItem = function() {
+        const item = getSelectedActionItem();
+        if (!item) return;
+        const unitOptions = [item.displayUnit];
+        if (item.allowBaseInput && item.baseUnit !== item.displayUnit) unitOptions.push(item.baseUnit);
+        document.getElementById("actionUnit").innerHTML = unitOptions.map(unit => `<option value="${escapeHtml(unit)}">${escapeHtml(unit)}</option>`).join("");
+        document.getElementById("actionModalTitle").textContent = `庫存操作｜${item.name}`;
+        document.getElementById("actionModalSub").textContent = `${item.basePerDisplay} ${item.baseUnit} = 1 ${item.displayUnit}；可輸入小數。`;
+        document.getElementById("unitHelp").textContent = item.baseUnit !== item.displayUnit ? `例：輸入 0.5 ${item.displayUnit} = ${roundQty(item.basePerDisplay * 0.5)} ${item.baseUnit}；也可直接輸入 ${item.baseUnit}。` : `此品項以 ${item.baseUnit} 為單位。`;
+        refreshLocationSelects(item);
+        refreshActionFields();
+        renderModalStockPreview(item);
+    };
+
+    function getSelectedActionItem() {
+        const id = document.getElementById("actionItemId").value;
+        return inventoryData.find(i => String(i.id) === String(id));
+    }
+
+    function refreshLocationSelects(item) {
+        const allowed = item.allowedLocations && item.allowedLocations.length ? item.allowedLocations : Object.keys(LOCATION_DEFS);
+        const options = allowed.map(key => `<option value="${key}">${LOCATION_DEFS[key].name}（目前 ${formatQty(item, normalizeNumber(item.locations?.[key], 0), { compact: true })}）</option>`).join("");
+        const from = document.getElementById("fromLocation");
+        const to = document.getElementById("toLocation");
+        from.innerHTML = options;
+        to.innerHTML = options;
+        from.value = item.defaultIssueLocation || allowed[0];
+        to.value = item.defaultReceiveLocation || allowed[0];
+    }
+
+    window.refreshActionFields = function() {
+        const item = getSelectedActionItem();
+        if (!item) return;
+        const type = document.getElementById("actionType").value;
+        const fromWrap = document.getElementById("fromWrap");
+        const toWrap = document.getElementById("toWrap");
+        fromWrap.classList.toggle("hidden", type === "receive");
+        toWrap.classList.toggle("hidden", type === "consume" || type === "waste");
+        if (type === "receive") document.getElementById("toLocation").value = item.defaultReceiveLocation;
+        if (type === "consume" || type === "waste") document.getElementById("fromLocation").value = item.defaultIssueLocation;
+        if (type === "move") {
+            document.getElementById("fromLocation").value = item.defaultReceiveLocation;
+            document.getElementById("toLocation").value = item.defaultIssueLocation;
+        }
+    };
+
+    function renderModalStockPreview(item) {
+        const keys = [...WAREHOUSE_KEYS, "prep", ...ONSITE_KEYS].filter(key => item.allowedLocations.includes(key) || normalizeNumber(item.locations?.[key], 0) > 0);
+        document.getElementById("modalStockPreview").innerHTML = keys.map(key => `<div class="location-tile"><div class="loc">${LOCATION_DEFS[key].name}</div><div class="qty">${formatQty(item, normalizeNumber(item.locations?.[key], 0))}</div></div>`).join("");
+    }
+
+    window.submitStockAction = function(event) {
+        event.preventDefault();
+        if (!guardOnline()) return;
+        const itemId = document.getElementById("actionItemId").value;
+        const actionType = document.getElementById("actionType").value;
+        const qtyVal = document.getElementById("actionQty").value;
+        const unit = document.getElementById("actionUnit").value;
+        const fromLocation = document.getElementById("fromLocation").value;
+        const toLocation = document.getElementById("toLocation").value;
+        const note = document.getElementById("actionNote").value.trim();
+        runStockTransaction((items, txLogs) => {
+            const item = items.find(i => String(i.id) === String(itemId));
+            if (!item) { alert("找不到此品項，請重新整理。"); return false; }
+            const baseQty = roundQty(qtyToBase(item, qtyVal, unit));
+            if (!Number.isFinite(baseQty) || baseQty <= 0) { alert("請輸入大於 0 的數量。"); return false; }
+            const qtyText = formatQty(item, baseQty);
+            const noteText = note ? `｜${note}` : "";
+            if (actionType === "receive") {
+                item.locations[toLocation] = roundQty(normalizeNumber(item.locations[toLocation], 0) + baseQty);
+                pushLog(txLogs, `📦 進貨入庫：【${item.name}】${LOCATION_DEFS[toLocation].name} +${qtyText}${noteText}`, { itemId: item.id, actionType, baseQty, toLocation });
+            } else if (actionType === "move") {
+                if (fromLocation === toLocation) { alert("來源與目的庫位不能相同。"); return false; }
+                if (normalizeNumber(item.locations[fromLocation], 0) < baseQty) { alert(`${LOCATION_DEFS[fromLocation].name} 存量不足。`); return false; }
+                item.locations[fromLocation] = roundQty(item.locations[fromLocation] - baseQty);
+                item.locations[toLocation] = roundQty(normalizeNumber(item.locations[toLocation], 0) + baseQty);
+                pushLog(txLogs, `🔄 移倉：【${item.name}】${LOCATION_DEFS[fromLocation].name} → ${LOCATION_DEFS[toLocation].name}，${qtyText}${noteText}`, { itemId: item.id, actionType, baseQty, fromLocation, toLocation });
+            } else if (actionType === "consume") {
+                if (normalizeNumber(item.locations[fromLocation], 0) < baseQty) { alert(`${LOCATION_DEFS[fromLocation].name} 存量不足。`); return false; }
+                item.locations[fromLocation] = roundQty(item.locations[fromLocation] - baseQty);
+                pushLog(txLogs, `📤 現場消耗：【${item.name}】${LOCATION_DEFS[fromLocation].name} -${qtyText}${noteText}`, { itemId: item.id, actionType, baseQty, fromLocation });
+            } else if (actionType === "waste") {
+                if (normalizeNumber(item.locations[fromLocation], 0) < baseQty) { alert(`${LOCATION_DEFS[fromLocation].name} 存量不足。`); return false; }
+                item.locations[fromLocation] = roundQty(item.locations[fromLocation] - baseQty);
+                pushLog(txLogs, `🗑️ 報廢 / 盤點扣減：【${item.name}】${LOCATION_DEFS[fromLocation].name} -${qtyText}${noteText}`, { itemId: item.id, actionType, baseQty, fromLocation });
+            }
+        }).then(() => closeModal("actionModal"));
+    };
+
+    window.clearLogs = function() {
+        if (!guardOnline()) return;
+        if (!confirm("確定要清除所有紀錄嗎？所有連線設備都會同步清除。")) return;
+        runStockTransaction((items, txLogs) => { txLogs.length = 0; });
+    };
+
+    window.unlockAdmin = function() {
+        const pin = document.getElementById("adminPin").value;
+        if (pin !== ADMIN_PIN) return alert("PIN 不正確。");
+        isAdmin = true;
+        sessionStorage.setItem("inventoryAdminUnlocked", "true");
+        renderAdmin();
+        showToast("已進入管理後台");
+    };
+
+    function renderAdmin() {
+        const lock = document.getElementById("adminLock");
+        const content = document.getElementById("adminContent");
+        if (!lock || !content) return;
+        lock.classList.toggle("hidden", isAdmin);
+        content.classList.toggle("hidden", !isAdmin);
+        if (!isAdmin) return;
+        renderCategoryManager();
+        renderAdminItems();
+    }
+
+    function renderCategoryManager() {
+        const chips = document.getElementById("categoryChips");
+        const cats = getAllCategories().filter(c => c !== "全部");
+        chips.innerHTML = cats.map(cat => `<span class="chip">${escapeHtml(cat)} <button class="btn btn-ghost btn-small" data-write="true" type="button" onclick="removeCategory('${escapeHtml(cat)}')">×</button></span>`).join("");
+    }
+
+    function renderAdminItems() {
+        const body = document.getElementById("adminItemBody");
+        body.innerHTML = normalizeItems(inventoryData).map(item => `
+            <tr class="${item.active === false ? "inactive-row" : ""}">
+                <td>${escapeHtml(item.sortOrder)}</td>
+                <td style="text-align:left;"><strong>${escapeHtml(item.name)}</strong><div class="help">${escapeHtml(item.category)}</div></td>
+                <td>${escapeHtml(item.basePerDisplay)} ${escapeHtml(item.baseUnit)} = 1 ${escapeHtml(item.displayUnit)}</td>
+                <td>${escapeHtml(item.thresholdDisplay)} ${escapeHtml(item.displayUnit)}<div class="help">${formatQty(item, item.thresholdBase)}</div></td>
+                <td>${LOCATION_DEFS[item.defaultReceiveLocation]?.name || "未設定"}</td>
+                <td>${item.active === false ? '<span class="badge badge-off">停用</span>' : '<span class="badge badge-ok">啟用</span>'}</td>
+                <td>
+                    <button class="btn btn-primary btn-small" type="button" onclick="openItemEditor(${item.id})">編輯</button>
+                    <button class="btn btn-ghost btn-small" data-write="true" type="button" onclick="toggleItemActive(${item.id})">${item.active === false ? "啟用" : "停用"}</button>
+                </td>
+            </tr>`).join("");
+    }
+
+    window.addCategory = function() {
+        const input = document.getElementById("newCategoryInput");
+        const val = input.value.trim();
+        if (!val) return;
+        runStockTransaction((items, txLogs, txSettings) => {
+            const cats = new Set([...(txSettings.categories || []), val]);
+            txSettings.categories = [...cats];
+            pushLog(txLogs, `⚙️ 後台設定：新增分類「${val}」`, { actionType: "category_add" });
+        });
+        input.value = "";
+    };
+
+    window.removeCategory = function(cat) {
+        const inUse = inventoryData.some(i => i.category === cat);
+        if (inUse) return alert("此分類仍有品項使用，請先調整品項分類或停用相關品項。");
+        if (!confirm(`確定移除分類「${cat}」？`)) return;
+        runStockTransaction((items, txLogs, txSettings) => {
+            txSettings.categories = (txSettings.categories || []).filter(c => c !== cat);
+            pushLog(txLogs, `⚙️ 後台設定：移除分類「${cat}」`, { actionType: "category_remove" });
+        });
+    };
+
+    window.openItemEditor = function(itemId = null) {
+        if (!isAdmin) return alert("請先進入管理後台。");
+        const item = itemId ? inventoryData.find(i => String(i.id) === String(itemId)) : null;
+        document.getElementById("itemModalTitle").textContent = item ? "編輯品項" : "新增品項";
+        document.getElementById("editItemId").value = item?.id || "";
+        document.getElementById("editName").value = item?.name || "";
+        document.getElementById("editCategory").value = item?.category || "";
+        document.getElementById("editDisplayUnit").value = item?.displayUnit || "包";
+        document.getElementById("editBaseUnit").value = item?.baseUnit || item?.displayUnit || "包";
+        document.getElementById("editBasePerDisplay").value = item?.basePerDisplay || 1;
+        document.getElementById("editThresholdDisplay").value = item?.thresholdDisplay || 0;
+        document.getElementById("editSortOrder").value = item?.sortOrder || (inventoryData.length + 1);
+        document.getElementById("editActive").value = String(item?.active !== false);
+        renderLocationOptionsForEditor(item);
+        openModal("itemModal");
+    };
+
+    function renderLocationOptionsForEditor(item) {
+        const receive = document.getElementById("editDefaultReceive");
+        const issue = document.getElementById("editDefaultIssue");
+        const options = Object.values(LOCATION_DEFS).map(loc => `<option value="${loc.id}">${loc.name}</option>`).join("");
+        receive.innerHTML = options;
+        issue.innerHTML = options;
+        receive.value = item?.defaultReceiveLocation || "warehouseRoom";
+        issue.value = item?.defaultIssueLocation || "onsiteRoom";
+        const allowed = new Set(item?.allowedLocations || ["warehouseRoom", "prep", "onsiteRoom"]);
+        document.getElementById("editAllowedLocations").innerHTML = Object.values(LOCATION_DEFS).map(loc => `
+            <label class="chip"><input type="checkbox" value="${loc.id}" ${allowed.has(loc.id) ? "checked" : ""}> ${loc.name}</label>`).join("");
+    }
+
+    window.saveItemFromForm = function(event) {
+        event.preventDefault();
+        if (!guardOnline()) return;
+        const idVal = document.getElementById("editItemId").value;
+        const allowedLocations = [...document.querySelectorAll("#editAllowedLocations input:checked")].map(el => el.value);
+        if (!allowedLocations.length) return alert("請至少選擇一個可用庫位。");
+        const formItem = {
+            id: idVal ? normalizeNumber(idVal) : Date.now(),
+            name: document.getElementById("editName").value.trim(),
+            category: document.getElementById("editCategory").value.trim(),
+            displayUnit: document.getElementById("editDisplayUnit").value.trim(),
+            baseUnit: document.getElementById("editBaseUnit").value.trim(),
+            basePerDisplay: normalizeNumber(document.getElementById("editBasePerDisplay").value, 1),
+            thresholdDisplay: normalizeNumber(document.getElementById("editThresholdDisplay").value, 0),
+            defaultReceiveLocation: document.getElementById("editDefaultReceive").value,
+            defaultIssueLocation: document.getElementById("editDefaultIssue").value,
+            sortOrder: normalizeNumber(document.getElementById("editSortOrder").value, inventoryData.length + 1),
+            active: document.getElementById("editActive").value === "true",
+            allowedLocations
+        };
+        if (!formItem.name || !formItem.category || !formItem.displayUnit || !formItem.baseUnit) return alert("請完整填寫品項資料。");
+        runStockTransaction((items, txLogs, txSettings) => {
+            const idx = items.findIndex(i => String(i.id) === String(formItem.id));
+            if (idx >= 0) {
+                const prev = items[idx];
+                const oldPer = normalizeNumber(prev.basePerDisplay, 1);
+                const newPer = formItem.basePerDisplay;
+                const factor = oldPer === newPer ? 1 : 1;
+                items[idx] = normalizeItem({ ...prev, ...formItem, thresholdBase: formItem.thresholdDisplay * formItem.basePerDisplay, locations: { ...prev.locations } }, idx);
+                if (factor !== 1) Object.keys(items[idx].locations).forEach(key => items[idx].locations[key] = roundQty(items[idx].locations[key] * factor));
+                pushLog(txLogs, `⚙️ 後台設定：編輯品項「${formItem.name}」`, { itemId: formItem.id, actionType: "item_update" });
+            } else {
+                items.push(normalizeItem({ ...formItem, thresholdBase: formItem.thresholdDisplay * formItem.basePerDisplay, locations: {} }, items.length));
+                pushLog(txLogs, `⚙️ 後台設定：新增品項「${formItem.name}」`, { itemId: formItem.id, actionType: "item_add" });
+            }
+            txSettings.categories = [...new Set([...(txSettings.categories || []), formItem.category])];
+        }).then(() => closeModal("itemModal"));
+    };
+
+    window.toggleItemActive = function(itemId) {
+        const item = inventoryData.find(i => String(i.id) === String(itemId));
+        if (!item) return;
+        const next = item.active === false;
+        if (!confirm(`${next ? "啟用" : "停用"}「${item.name}」？`)) return;
+        runStockTransaction((items, txLogs) => {
+            const it = items.find(i => String(i.id) === String(itemId));
+            if (!it) return false;
+            it.active = next;
+            pushLog(txLogs, `⚙️ 後台設定：${next ? "啟用" : "停用"}品項「${it.name}」`, { itemId, actionType: "item_toggle" });
+        });
+    };
+
+    function openModal(id) { document.getElementById(id).classList.add("open"); }
+    window.closeModal = function(id) { document.getElementById(id).classList.remove("open"); };
+
+    window.addEventListener("beforeinstallprompt", (event) => {
+        event.preventDefault();
+        deferredInstallPrompt = event;
+    });
+    window.installPwaPrompt = async function() {
+        if (!deferredInstallPrompt) {
+            showToast("可使用瀏覽器分享選單加入主畫面");
+            return;
+        }
+        deferredInstallPrompt.prompt();
+        await deferredInstallPrompt.userChoice;
+        deferredInstallPrompt = null;
+    };
+
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+            navigator.serviceWorker.register("./sw.js").catch(err => console.warn("Service Worker 註冊失敗", err));
+        });
+    }
+
+    window.__inventoryDebug = { normalizeItem, formatQty, LOCATION_DEFS };
+</script>
+</body>
+</html>
