@@ -722,7 +722,10 @@ const firebaseConfig = {
     }
 
     function renderLocationStack(item, keys) {
-        return `<div class="stock-stack">${keys.map(key => `<div class="stock-line"><span>${LOCATION_DEFS[key].short}</span><strong>${formatQty(item, normalizeNumber(item.locations?.[key], 0), { compact: true })}</strong></div>`).join("")}</div>`;
+        const allowed = item.allowedLocations || [];
+        const filtered = keys.filter(k => allowed.includes(k));
+        if (!filtered.length) return '<div class="stock-stack" style="color:#ccc;font-size:12px;">—</div>';
+        return `<div class="stock-stack">${filtered.map(key => `<div class="stock-line"><span>${LOCATION_DEFS[key].short}</span><strong>${formatQty(item, normalizeNumber(item.locations?.[key], 0), { compact: true })}</strong></div>`).join("")}</div>`;
     }
 
     function renderMobileCard(item) {
