@@ -308,7 +308,7 @@
                         <th style="width:6%;">類別</th>
                         <th style="text-align:left;width:16%;">食材 / 物品</th>
                         <th style="width:14%;">大倉</th>
-                        <th style="width:12%;">備料</th>
+                        <th style="width:12%;">備貨</th>
                         <th style="width:10%;">提醒</th>
                         <th style="width:13%;">數量</th>
                         <th style="width:29%;">動作</th>
@@ -397,7 +397,7 @@ const firebaseConfig = {
         warehouseChilled: { id: "warehouseChilled", name: "大倉冷藏", short: "冷藏", group: "大倉" },
         warehouseRoom:    { id: "warehouseRoom",    name: "大倉常溫", short: "常溫", group: "大倉" },
         onsiteChilled:    { id: "onsiteChilled",    name: "解凍冷藏", short: "解凍", group: "備貨" },
-        prep:             { id: "prep",             name: "其他備貨", short: "備貨", group: "備貨" },
+        prep:             { id: "prep",             name: "其他備貨", short: "其他", group: "備貨" },
         pizzaStation:     { id: "pizzaStation",     name: "比薩區",   short: "比薩", group: "使用區" },
         chickenStation:   { id: "chickenStation",   name: "炸雞區",   short: "炸雞", group: "使用區" },
     };
@@ -1210,14 +1210,28 @@ const firebaseConfig = {
 
     function countLocKeys(item) {
         const primary = item.defaultReceiveLocation || 'warehouseFrozen';
-        const withStock = [...WAREHOUSE_KEYS, ...PREP_KEYS].filter(k => k !== primary && (item.locations?.[k] || 0) > 0);
-        const all = new Set([primary, ...withStock]);
+        const warehouseWithStock = WAREHOUSE_KEYS.filter(k => k !== primary && (item.locations?.[k] || 0) > 0);
+        const warehouseAll = new Set([primary, ...warehouseWithStock]);
+        if (!item.enableThaw) {
+            return WAREHOUSE_KEYS.filter(k => warehouseAll.has(k));
+        }
+        const issueLoc = item.defaultIssueLocation;
+        const prepExtra = PREP_KEYS.filter(k => k !== issueLoc && (item.locations?.[k] || 0) > 0);
+        const all = new Set([...warehouseAll, ...(issueLoc ? [issueLoc] : []), ...prepExtra]);
         return [...WAREHOUSE_KEYS, ...PREP_KEYS].filter(k => all.has(k));
     }
 
     function renderCountLocInputs(item, keys) {
-        const primary = item.defaultReceiveLocation || 'warehouseFrozen';
-        const visible = keys.filter(k => k === primary || (item.locations?.[k] || 0) > 0);
+        const isPrepGroup = keys.every(k => PREP_KEYS.includes(k));
+        let visible;
+        if (isPrepGroup) {
+            if (!item.enableThaw) return '<div style="color:#ccc;font-size:12px;text-align:center;">—</div>';
+            const issueLoc = item.defaultIssueLocation;
+            visible = keys.filter(k => k === issueLoc || (item.locations?.[k] || 0) > 0);
+        } else {
+            const primary = item.defaultReceiveLocation || 'warehouseFrozen';
+            visible = keys.filter(k => k === primary || (item.locations?.[k] || 0) > 0);
+        }
         if (!visible.length) return '<div style="color:#ccc;font-size:12px;text-align:center;">—</div>';
         return `<div class="count-input-stack">${visible.map(key => {
             const currentDisplay = toDisplayQty(item, normalizeNumber(item.locations?.[key], 0));
