@@ -98,6 +98,18 @@
         .action-loc-select { flex: 1; padding: 7px 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; font-family: inherit; background: #fff; }
         .action-loc-select:focus { outline: none; border-color: var(--primary); }
 
+        /* Report */
+        .report-controls { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:20px; background:#f8faf9; border-radius:12px; padding:16px; }
+        .preset-btns { display:flex; flex-wrap:wrap; gap:6px; }
+        .preset-btn { padding:7px 14px; border:1.5px solid #cdd7d1; border-radius:20px; background:#fff; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; color:#3a5a48; }
+        .preset-btn.active { background:var(--primary); border-color:var(--primary); color:#fff; }
+        .report-custom-dates { display:flex; align-items:center; gap:8px; font-size:13px; flex-wrap:wrap; }
+        .report-custom-dates input[type="date"] { border:1.5px solid #cdd7d1; border-radius:8px; padding:6px 10px; font-size:13px; background:#fff; }
+        .report-filter-sel { border:1.5px solid #cdd7d1; border-radius:8px; padding:7px 10px; font-size:13px; background:#fff; min-width:140px; }
+        .report-summary { font-size:13px; font-weight:700; color:#3a5a48; margin-bottom:12px; }
+        .report-note { font-size:11px; color:#9aaba3; margin-top:8px; line-height:1.6; }
+        td.num-cell { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+
         /* Toast */
         #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; display: none; z-index: 200; pointer-events: none; white-space: nowrap; }
     </style>
@@ -126,6 +138,7 @@
     <div class="tabs">
         <div class="tab active" data-tab="items" onclick="switchTab('items')">品項管理</div>
         <div class="tab" data-tab="categories" onclick="switchTab('categories')">分類管理</div>
+        <div class="tab" data-tab="reports" onclick="switchTab('reports')">📊 報表</div>
         <div class="tab" data-tab="settings" onclick="switchTab('settings')">系統設定</div>
     </div>
 
@@ -165,6 +178,48 @@
             <input type="text" id="newCatInput" placeholder="新分類名稱" onkeydown="if(event.key==='Enter')addCategory()">
             <button class="btn btn-primary btn-sm" onclick="addCategory()">新增</button>
         </div>
+    </div>
+
+    <!-- 報表 -->
+    <div id="tab-reports" class="tab-content">
+        <div class="section-header"><h2>報表</h2></div>
+        <div class="report-controls">
+            <div class="preset-btns">
+                <button class="preset-btn active" data-preset="today"     onclick="setPreset('today')">今天</button>
+                <button class="preset-btn"         data-preset="yesterday" onclick="setPreset('yesterday')">昨天</button>
+                <button class="preset-btn"         data-preset="week"      onclick="setPreset('week')">本週</button>
+                <button class="preset-btn"         data-preset="month"     onclick="setPreset('month')">本月</button>
+                <button class="preset-btn"         data-preset="custom"    onclick="setPreset('custom')">自訂</button>
+            </div>
+            <div class="report-custom-dates" id="reportCustomDates" style="display:none;">
+                <label>從 <input type="date" id="reportStart"></label>
+                <label>到 <input type="date" id="reportEnd"></label>
+            </div>
+            <select class="report-filter-sel" id="reportCatFilter">
+                <option value="">全部分類</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="generateReport()">查詢</button>
+        </div>
+        <div class="report-summary" id="reportSummary"></div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>品項</th>
+                        <th>類別</th>
+                        <th style="text-align:right;">期初庫存</th>
+                        <th style="text-align:right;">入庫 ＋</th>
+                        <th style="text-align:right;">消耗 −</th>
+                        <th style="text-align:right;">回放 ＋</th>
+                        <th style="text-align:right;">期末庫存</th>
+                    </tr>
+                </thead>
+                <tbody id="reportBody">
+                    <tr><td colspan="7" style="text-align:center;color:#999;padding:20px;">點擊「查詢」產生報表</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="report-note">⚠️ 期初庫存 = 期末庫存 − 本期淨異動，以「目前庫存」回推。若選取時段內有盤點，數字可能略有誤差。</div>
     </div>
 
     <!-- 系統設定 -->
@@ -406,6 +461,7 @@
     let categories    = [];
     let adminPin      = "1234";
     let countPin      = "";
+    let reportPreset  = 'today';
 
     // ── Helpers ─────────────────────────────────────────
     function nn(v, fb = 0) { const n = Number(v); return Number.isFinite(n) ? n : fb; }
@@ -449,6 +505,7 @@
             inventoryData = [];
         }
         renderItems();
+        refreshReportCategories();
     });
 
     onSnapshot(settingsRef, snap => {
@@ -459,6 +516,7 @@
             countPin   = data.countPin   || "";
         }
         renderCategories();
+        refreshReportCategories();
         const cpDisplay = document.getElementById('countPinDisplay');
         if (cpDisplay) cpDisplay.textContent = countPin ? `目前：${countPin.replace(/./g, '●')}` : '（尚未設定）';
     });
@@ -796,6 +854,122 @@
         showToast(`✅ 已清理 ${snap.size} 筆舊記錄`);
         document.getElementById('logStatsDisplay').textContent = '（已更新，請重新查詢統計）';
     };
+
+    // ── Report ───────────────────────────────────────────
+    function sumLocations(item) {
+        return Object.values(item.locations || {}).reduce((s, v) => s + (v || 0), 0);
+    }
+
+    function getDateRangeTs() {
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        if (reportPreset === 'today') {
+            return { start: todayStart, end: Date.now() };
+        } else if (reportPreset === 'yesterday') {
+            return { start: todayStart - 86400000, end: todayStart - 1 };
+        } else if (reportPreset === 'week') {
+            const dow = now.getDay() || 7;
+            return { start: todayStart - (dow - 1) * 86400000, end: Date.now() };
+        } else if (reportPreset === 'month') {
+            return { start: new Date(now.getFullYear(), now.getMonth(), 1).getTime(), end: Date.now() };
+        } else {
+            const s = document.getElementById('reportStart').value;
+            const e = document.getElementById('reportEnd').value;
+            return { start: s ? new Date(s).getTime() : 0, end: e ? new Date(e + 'T23:59:59').getTime() : Date.now() };
+        }
+    }
+
+    function refreshReportCategories() {
+        const sel = document.getElementById('reportCatFilter');
+        if (!sel) return;
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">全部分類</option>' +
+            categories.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+        if (cur) sel.value = cur;
+    }
+
+    window.setPreset = function(preset) {
+        reportPreset = preset;
+        document.querySelectorAll('.preset-btn').forEach(b =>
+            b.classList.toggle('active', b.dataset.preset === preset));
+        document.getElementById('reportCustomDates').style.display = preset === 'custom' ? 'flex' : 'none';
+    };
+
+    window.generateReport = async function() {
+        const { start, end } = getDateRangeTs();
+        const catFilter = document.getElementById('reportCatFilter').value;
+        const active = inventoryData.filter(i => i.active !== false && (!catFilter || i.category === catFilter));
+
+        const body = document.getElementById('reportBody');
+        const summary = document.getElementById('reportSummary');
+        if (!active.length) {
+            body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#999;padding:20px;">無符合條件的品項</td></tr>';
+            summary.textContent = '';
+            return;
+        }
+
+        body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#999;padding:20px;">查詢中…</td></tr>';
+        summary.textContent = '';
+
+        try {
+            const logsSnap = await getDocs(query(logsRef, where("ts", ">=", start), where("ts", "<=", end)));
+            const logsByItem = {};
+            logsSnap.docs.forEach(d => {
+                const l = d.data();
+                if (l.itemId == null || !l.actionType) return;
+                const key = String(l.itemId);
+                if (!logsByItem[key]) logsByItem[key] = [];
+                logsByItem[key].push(l);
+            });
+
+            const sorted = [...active].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+            const rows = sorted.map(item => {
+                const logs = logsByItem[String(item.id)] || [];
+                let receive = 0, consume = 0, ret = 0;
+                logs.forEach(l => {
+                    const qty = l.baseQty || 0;
+                    if (l.actionType === 'receive') receive += qty;
+                    else if (l.actionType === 'consume') consume += qty;
+                    else if (l.actionType === 'return') ret += qty;
+                });
+                const bpd = item.basePerDisplay || 1;
+                const closingBase = sumLocations(item);
+                const openingBase = closingBase - (receive + ret - consume);
+                const fmt = base => {
+                    const disp = base / bpd;
+                    const s = Math.abs(disp - Math.round(disp)) < 0.005 ? Math.round(disp) : disp.toFixed(2);
+                    return `${s} ${esc(item.displayUnit)}`;
+                };
+                const fmtSign = (base, sign, color) => base > 0
+                    ? `<span style="color:${color};">${sign}${fmt(base)}</span>`
+                    : '<span style="color:#bbb;">—</span>';
+                return `<tr>
+                    <td><strong>${esc(item.name)}</strong></td>
+                    <td>${esc(item.category)}</td>
+                    <td class="num-cell">${fmt(openingBase)}</td>
+                    <td class="num-cell">${fmtSign(receive, '+', '#2e7d32')}</td>
+                    <td class="num-cell">${fmtSign(consume, '-', '#c62828')}</td>
+                    <td class="num-cell">${fmtSign(ret, '+', '#1565c0')}</td>
+                    <td class="num-cell"><strong>${fmt(closingBase)}</strong></td>
+                </tr>`;
+            });
+
+            body.innerHTML = rows.join('') || '<tr><td colspan="7" style="text-align:center;color:#999;padding:20px;">無資料</td></tr>';
+            const fmtDate = ts => new Date(ts).toLocaleDateString('zh-TW');
+            summary.textContent = `查詢範圍：${fmtDate(start)} ～ ${fmtDate(end)}，共 ${sorted.length} 項，操作記錄 ${logsSnap.size} 筆`;
+        } catch (e) {
+            body.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#c62828;padding:20px;">查詢失敗：${esc(e.message)}</td></tr>`;
+        }
+    };
+
+    // pre-fill custom date inputs with today
+    (function() {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const s = document.getElementById('reportStart');
+        const e = document.getElementById('reportEnd');
+        if (s) s.value = todayStr;
+        if (e) e.value = todayStr;
+    })();
 
     // ── Toast ─────────────────────────────────────────────
     function showToast(text) {
