@@ -244,7 +244,8 @@
         .qact-prep    { background: #e0f2f1; color: #006064; }
         .qact-consume { background: #ffebee; color: #c62828; }
         .qact-return  { background: #fff3e0; color: #e65100; }
-        .qact-info    { background: transparent; border: 1px solid #cdd7d1; color: #7d8a83; padding: 6px 8px; border-radius: 8px; font-size: 13px; cursor: pointer; position: relative; }
+        .qact-info    { background: #e8f3fb; border: 1px solid #90c4e4; color: #1565c0; padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+        .info-cell-btns { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
         .info-pop { position: absolute; right: 0; top: calc(100% + 6px); background: #23352b; color: #fff; border-radius: 12px; padding: 10px 14px; font-size: 12px; line-height: 1.8; white-space: pre-line; width: max-content; max-width: 280px; z-index: 50; box-shadow: 0 8px 24px rgba(0,0,0,0.22); }
         .info-pop .info-notes { margin-top: 8px; padding-top: 8px; border-top: 1px solid #3d5a4a; color: #b6cfc3; }
         .info-pop::before { content: ""; position: absolute; top: -6px; right: 12px; border: 6px solid transparent; border-top: 0; border-bottom-color: #23352b; }
@@ -305,13 +306,14 @@
             <table>
                 <thead>
                     <tr>
-                        <th style="width:6%;">類別</th>
-                        <th style="text-align:left;width:16%;">食材 / 物品</th>
-                        <th style="width:14%;">大倉</th>
-                        <th style="width:12%;">備貨</th>
-                        <th style="width:10%;">提醒</th>
-                        <th style="width:13%;">數量</th>
-                        <th style="width:29%;">動作</th>
+                        <th style="width:5%;">類別</th>
+                        <th style="text-align:left;width:15%;">食材 / 物品</th>
+                        <th style="width:13%;">大倉</th>
+                        <th style="width:11%;">備貨</th>
+                        <th style="width:9%;">提醒</th>
+                        <th style="width:12%;">數量</th>
+                        <th style="width:22%;">動作</th>
+                        <th style="width:13%;">資訊</th>
                     </tr>
                 </thead>
                 <tbody id="inventoryBody"><tr><td colspan="7" class="loading-text">🔄 正在載入資料庫，請稍候...</td></tr></tbody>
@@ -767,8 +769,12 @@ const firebaseConfig = {
                         ${item.enableThaw ? `<button class="qact-btn qact-prep" type="button" ${dis} onclick="execQuickAction(${item.id},'prep')">備料</button>` : ""}
                         <button class="qact-btn qact-consume" type="button" ${dis} onclick="execQuickAction(${item.id},'consume')">消耗</button>
                         ${item.enableReturn ? `<button class="qact-btn qact-return" type="button" ${dis} onclick="execQuickAction(${item.id},'return')">回放</button>` : ""}
-                        <div style="position:relative;display:inline-block;">
-                            <button class="qact-info" type="button" onclick="toggleInfoPop(event,${item.id})">ℹ️</button>
+                    </div>
+                </td>
+                <td>
+                    <div class="info-cell-btns">
+                        <div style="position:relative;">
+                            <button class="qact-info" type="button" onclick="toggleInfoPop(event,${item.id})">說明</button>
                             <div class="info-pop hidden" id="info-pop-${item.id}">${infoLines.map(l => escapeHtml(l)).join("<br>")}${item.notes ? `<div class="info-notes">${escapeHtml(item.notes)}</div>` : ""}</div>
                         </div>
                         <button class="qact-log-toggle" id="log-toggle-table-${item.id}" type="button" onclick="toggleItemLog(${item.id})">明細</button>
@@ -776,7 +782,7 @@ const firebaseConfig = {
                 </td>
             </tr>
             <tr class="log-subrow hidden" id="log-subrow-${item.id}">
-                <td colspan="8"><div class="log-subrow-inner" id="log-subrow-content-${item.id}"></div></td>
+                <td colspan="9"><div class="log-subrow-inner" id="log-subrow-content-${item.id}"></div></td>
             </tr>`;
     }
 
