@@ -563,13 +563,12 @@ const firebaseConfig = {
         localStorage.setItem('inventoryLang', lang);
         applyStaticLang();
         renderAll();
-        if (lang === 'vi' && !localStorage.getItem('viTipShown')) {
+        if (lang === 'vi') {
             document.getElementById('viTip')?.classList.remove('hidden');
         }
     };
 
     window.closeViTip = function() {
-        localStorage.setItem('viTipShown', '1');
         document.getElementById('viTip')?.classList.add('hidden');
     };
 
