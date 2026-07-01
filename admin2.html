@@ -383,28 +383,18 @@
         chickenStation:   { name: "炸雞區",   short: "炸雞", group: "使用區" },
     };
     const STORAGE_PRESETS = {
-        冷凍: { receive: "warehouseFrozen",  issue: "onsiteChilled", consume: "prep", return: "warehouseFrozen",  allowed: ["warehouseFrozen", "prep"] },
-        冷藏: { receive: "warehouseChilled", issue: "onsiteChilled", consume: "prep", return: "warehouseChilled", allowed: ["warehouseChilled", "prep"] },
-        常溫: { receive: "warehouseRoom",    issue: "prep",          consume: "prep", return: "warehouseRoom",    allowed: ["warehouseRoom", "prep"] }
+        冷凍: { receive: "warehouseFrozen",  return: "warehouseFrozen"  },
+        冷藏: { receive: "warehouseChilled", return: "warehouseChilled" },
+        常溫: { receive: "warehouseRoom",    return: "warehouseRoom"    }
     };
-    const DEFAULT_CATEGORIES = ['肉類','海鮮','臘腸','薯條起司','蔬菜','罐頭類','飲料','粉','醬料','外帶醬料','包材','衛生用品','清潔用品'];
-
     let inventoryData = [];
-    let categories    = [...DEFAULT_CATEGORIES];
+    let categories    = [];
     let adminPin      = "1234";
     let countPin      = "";
 
     // ── Helpers ─────────────────────────────────────────
     function nn(v, fb = 0) { const n = Number(v); return Number.isFinite(n) ? n : fb; }
     function esc(s) { return String(s ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c])); }
-
-    function computeAllowedLocations(storageType, enableThaw, primaryStation) {
-        const preset = STORAGE_PRESETS[storageType] || STORAGE_PRESETS['冷凍'];
-        const allowed = [...preset.allowed]; // e.g. ['warehouseFrozen', 'prep']
-        if (enableThaw && storageType === '冷凍') allowed.push('onsiteChilled');
-        if (primaryStation && !allowed.includes(primaryStation)) allowed.push(primaryStation);
-        return allowed;
-    }
 
     function normalizeItem(item, idx) {
         const storageType    = item.storageType    || '冷凍';
@@ -413,16 +403,12 @@
         const primaryStation = item.primaryStation || 'pizzaStation';
         const preset = STORAGE_PRESETS[storageType] || STORAGE_PRESETS['冷凍'];
         const basePerDisplay = nn(item.basePerDisplay, 1) || 1;
-        const thresholdDisplay = nn(item.thresholdDisplay ?? item.thresholdBase ?? item.threshold, 0);
+        const thresholdDisplay = nn(item.thresholdDisplay ?? item.thresholdBase, 0);
         const locs = {};
         Object.keys(LOCATION_DEFS).forEach(k => { locs[k] = nn(item.locations?.[k], 0); });
-        locs.onsiteRoom = 0; // 舊欄位廢棄
-        if (!item.locations) {
-            locs[preset.receive] = nn(item.freezerStock, 0);
-        }
         return {
-            displayUnit: item.displayUnit || item.unit || '個',
-            baseUnit: item.baseUnit || item.displayUnit || item.unit || '個',
+            displayUnit: item.displayUnit || '個',
+            baseUnit: item.baseUnit || item.displayUnit || '個',
             basePerDisplay,
             storageType, enableThaw, enableReturn, primaryStation,
             thresholdDisplay,
@@ -434,9 +420,7 @@
             active: item.active !== false,
             sortOrder: nn(item.sortOrder, idx),
             ...item,
-            // 強制覆蓋：這些欄位一律由計算決定
             storageType, enableThaw, enableReturn, primaryStation,
-            allowedLocations: computeAllowedLocations(storageType, enableThaw, primaryStation),
             locations: locs,
         };
     }
@@ -455,7 +439,7 @@
     onSnapshot(settingsRef, snap => {
         if (snap.exists()) {
             const data = snap.data();
-            categories = data.categories || DEFAULT_CATEGORIES;
+            categories = data.categories || [];
             adminPin   = data.adminPin   || "1234";
             countPin   = data.countPin   || "";
         }
