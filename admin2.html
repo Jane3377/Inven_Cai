@@ -187,7 +187,7 @@
     <div id="tab-reports" class="tab-content">
         <div class="section-header">
             <h2>報表</h2>
-            <button class="btn btn-outline btn-sm" id="exportCsvBtn" style="display:none;" onclick="exportReportCsv()">⬇ 匯出 CSV</button>
+            <button class="btn btn-outline btn-sm" id="exportCsvBtn" style="display:none;" onclick="exportReportXlsx()">⬇ 匯出 Excel</button>
         </div>
         <div class="report-controls">
             <div class="preset-btns">
@@ -425,6 +425,7 @@
 
 <div id="toast"></div>
 
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { doc, collection, setDoc, onSnapshot, runTransaction, getDocs, query, where, writeBatch, initializeFirestore, persistentLocalCache, persistentMultipleTabManager }
@@ -1000,25 +1001,24 @@
         renderReportTable();
     };
 
-    window.exportReportCsv = function() {
+    window.exportReportXlsx = function() {
         if (!reportRows.length) return;
         const fmtNum = (base, bpd) => {
             const d = base / bpd;
-            return Math.abs(d - Math.round(d)) < 0.005 ? Math.round(d) : d.toFixed(2);
+            return Math.abs(d - Math.round(d)) < 0.005 ? Math.round(d) : parseFloat(d.toFixed(2));
         };
-        const header = ['品項', '類別', '期初庫存', '入庫', '消耗', '回放', '期末庫存', '單位'];
-        const lines = reportRows.map(r => [
-            r.name, r.category,
+        const header = ['品項', '類別', '單位', '期初庫存', '入庫', '消耗', '回放', '期末庫存'];
+        const data = [header, ...reportRows.map(r => [
+            r.name, r.category, r.unit,
             fmtNum(r.opening, r.bpd), fmtNum(r.receive, r.bpd),
             fmtNum(r.consume, r.bpd), fmtNum(r.ret, r.bpd),
-            fmtNum(r.closing, r.bpd), r.unit
-        ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
-        const csv = '﻿' + [header.join(','), ...lines].join('\r\n');
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-        a.download = `庫存報表_${new Date().toISOString().split('T')[0]}.csv`;
-        a.click();
-        URL.revokeObjectURL(a.href);
+            fmtNum(r.closing, r.bpd)
+        ])];
+        const ws = window.XLSX.utils.aoa_to_sheet(data);
+        ws['!cols'] = [{ wch: 22 }, { wch: 10 }, { wch: 6 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
+        const wb = window.XLSX.utils.book_new();
+        window.XLSX.utils.book_append_sheet(wb, ws, '庫存報表');
+        window.XLSX.writeFile(wb, `庫存報表_${new Date().toISOString().split('T')[0]}.xlsx`);
     };
 
     // pre-fill custom date inputs with today
