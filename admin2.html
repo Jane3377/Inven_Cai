@@ -109,6 +109,9 @@
         .report-summary { font-size:13px; font-weight:700; color:#3a5a48; margin-bottom:12px; }
         .report-note { font-size:11px; color:#9aaba3; margin-top:8px; line-height:1.6; }
         td.num-cell { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+        th.sort-th { cursor:pointer; user-select:none; }
+        th.sort-th:hover { background:#ececec; }
+        .sort-ind { margin-left:4px; font-size:10px; color:var(--primary); }
 
         /* Toast */
         #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; display: none; z-index: 200; pointer-events: none; white-space: nowrap; }
@@ -138,7 +141,7 @@
     <div class="tabs">
         <div class="tab active" data-tab="items" onclick="switchTab('items')">品項管理</div>
         <div class="tab" data-tab="categories" onclick="switchTab('categories')">分類管理</div>
-        <div class="tab" data-tab="reports" onclick="switchTab('reports')">📊 報表</div>
+        <div class="tab" data-tab="reports" onclick="switchTab('reports')">報表</div>
         <div class="tab" data-tab="settings" onclick="switchTab('settings')">系統設定</div>
     </div>
 
@@ -182,7 +185,10 @@
 
     <!-- 報表 -->
     <div id="tab-reports" class="tab-content">
-        <div class="section-header"><h2>報表</h2></div>
+        <div class="section-header">
+            <h2>報表</h2>
+            <button class="btn btn-outline btn-sm" id="exportCsvBtn" style="display:none;" onclick="exportReportCsv()">⬇ 匯出 CSV</button>
+        </div>
         <div class="report-controls">
             <div class="preset-btns">
                 <button class="preset-btn active" data-preset="today"     onclick="setPreset('today')">今天</button>
@@ -205,13 +211,13 @@
             <table>
                 <thead>
                     <tr>
-                        <th>品項</th>
-                        <th>類別</th>
-                        <th style="text-align:right;">期初庫存</th>
-                        <th style="text-align:right;">入庫 ＋</th>
-                        <th style="text-align:right;">消耗 −</th>
-                        <th style="text-align:right;">回放 ＋</th>
-                        <th style="text-align:right;">期末庫存</th>
+                        <th class="sort-th" onclick="sortReport('name')">品項<span class="sort-ind" id="sort-name"></span></th>
+                        <th class="sort-th" onclick="sortReport('category')">類別<span class="sort-ind" id="sort-category"></span></th>
+                        <th class="sort-th" style="text-align:right;" onclick="sortReport('opening')">期初庫存<span class="sort-ind" id="sort-opening"></span></th>
+                        <th class="sort-th" style="text-align:right;" onclick="sortReport('receive')">入庫 ＋<span class="sort-ind" id="sort-receive"></span></th>
+                        <th class="sort-th" style="text-align:right;" onclick="sortReport('consume')">消耗 −<span class="sort-ind" id="sort-consume"></span></th>
+                        <th class="sort-th" style="text-align:right;" onclick="sortReport('ret')">回放 ＋<span class="sort-ind" id="sort-ret"></span></th>
+                        <th class="sort-th" style="text-align:right;" onclick="sortReport('closing')">期末庫存<span class="sort-ind" id="sort-closing"></span></th>
                     </tr>
                 </thead>
                 <tbody id="reportBody">
@@ -462,6 +468,8 @@
     let adminPin      = "1234";
     let countPin      = "";
     let reportPreset  = 'today';
+    let reportRows    = [];
+    let reportSort    = { col: null, dir: 1 };
 
     // ── Helpers ─────────────────────────────────────────
     function nn(v, fb = 0) { const n = Number(v); return Number.isFinite(n) ? n : fb; }
@@ -902,6 +910,10 @@
 
         const body = document.getElementById('reportBody');
         const summary = document.getElementById('reportSummary');
+        const exportBtn = document.getElementById('exportCsvBtn');
+        reportRows = [];
+        exportBtn.style.display = 'none';
+
         if (!active.length) {
             body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#999;padding:20px;">無符合條件的品項</td></tr>';
             summary.textContent = '';
@@ -922,8 +934,8 @@
                 logsByItem[key].push(l);
             });
 
-            const sorted = [...active].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-            const rows = sorted.map(item => {
+            const itemsSorted = [...active].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+            reportRows = itemsSorted.map(item => {
                 const logs = logsByItem[String(item.id)] || [];
                 let receive = 0, consume = 0, ret = 0;
                 logs.forEach(l => {
@@ -932,34 +944,81 @@
                     else if (l.actionType === 'consume') consume += qty;
                     else if (l.actionType === 'return') ret += qty;
                 });
-                const bpd = item.basePerDisplay || 1;
-                const closingBase = sumLocations(item);
-                const openingBase = closingBase - (receive + ret - consume);
-                const fmt = base => {
-                    const disp = base / bpd;
-                    const s = Math.abs(disp - Math.round(disp)) < 0.005 ? Math.round(disp) : disp.toFixed(2);
-                    return `${s} ${esc(item.displayUnit)}`;
-                };
-                const fmtSign = (base, sign, color) => base > 0
-                    ? `<span style="color:${color};">${sign}${fmt(base)}</span>`
-                    : '<span style="color:#bbb;">—</span>';
-                return `<tr>
-                    <td><strong>${esc(item.name)}</strong></td>
-                    <td>${esc(item.category)}</td>
-                    <td class="num-cell">${fmt(openingBase)}</td>
-                    <td class="num-cell">${fmtSign(receive, '+', '#2e7d32')}</td>
-                    <td class="num-cell">${fmtSign(consume, '-', '#c62828')}</td>
-                    <td class="num-cell">${fmtSign(ret, '+', '#1565c0')}</td>
-                    <td class="num-cell"><strong>${fmt(closingBase)}</strong></td>
-                </tr>`;
+                const closing = sumLocations(item);
+                const opening = closing - (receive + ret - consume);
+                return { name: item.name, category: item.category, opening, receive, consume, ret, closing, bpd: item.basePerDisplay || 1, unit: item.displayUnit };
             });
 
-            body.innerHTML = rows.join('') || '<tr><td colspan="7" style="text-align:center;color:#999;padding:20px;">無資料</td></tr>';
+            reportSort = { col: null, dir: 1 };
+            renderReportTable();
             const fmtDate = ts => new Date(ts).toLocaleDateString('zh-TW');
-            summary.textContent = `查詢範圍：${fmtDate(start)} ～ ${fmtDate(end)}，共 ${sorted.length} 項，操作記錄 ${logsSnap.size} 筆`;
+            summary.textContent = `查詢範圍：${fmtDate(start)} ～ ${fmtDate(end)}，共 ${reportRows.length} 項，操作記錄 ${logsSnap.size} 筆`;
+            exportBtn.style.display = '';
         } catch (e) {
             body.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#c62828;padding:20px;">查詢失敗：${esc(e.message)}</td></tr>`;
         }
+    };
+
+    function renderReportTable() {
+        const cols = ['name', 'category', 'opening', 'receive', 'consume', 'ret', 'closing'];
+        cols.forEach(c => {
+            const el = document.getElementById('sort-' + c);
+            if (el) el.textContent = reportSort.col === c ? (reportSort.dir === 1 ? ' ▲' : ' ▼') : '';
+        });
+
+        const data = [...reportRows].sort((a, b) => {
+            if (!reportSort.col) return 0;
+            const va = a[reportSort.col], vb = b[reportSort.col];
+            if (typeof va === 'string') return reportSort.dir * va.localeCompare(vb, 'zh-TW');
+            return reportSort.dir * (va - vb);
+        });
+
+        const fmtBase = (base, bpd, unit) => {
+            const disp = base / bpd;
+            const s = Math.abs(disp - Math.round(disp)) < 0.005 ? Math.round(disp) : disp.toFixed(2);
+            return `${s} ${esc(unit)}`;
+        };
+        const fmtSign = (base, bpd, unit, sign, color) => base > 0
+            ? `<span style="color:${color};">${sign}${fmtBase(base, bpd, unit)}</span>`
+            : '<span style="color:#bbb;">—</span>';
+
+        document.getElementById('reportBody').innerHTML = data.map(r => `<tr>
+            <td><strong>${esc(r.name)}</strong></td>
+            <td>${esc(r.category)}</td>
+            <td class="num-cell">${fmtBase(r.opening, r.bpd, r.unit)}</td>
+            <td class="num-cell">${fmtSign(r.receive, r.bpd, r.unit, '+', '#2e7d32')}</td>
+            <td class="num-cell">${fmtSign(r.consume, r.bpd, r.unit, '-', '#c62828')}</td>
+            <td class="num-cell">${fmtSign(r.ret,     r.bpd, r.unit, '+', '#1565c0')}</td>
+            <td class="num-cell"><strong>${fmtBase(r.closing, r.bpd, r.unit)}</strong></td>
+        </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:#999;padding:20px;">無資料</td></tr>';
+    }
+
+    window.sortReport = function(col) {
+        if (!reportRows.length) return;
+        reportSort.dir = reportSort.col === col ? -reportSort.dir : 1;
+        reportSort.col = col;
+        renderReportTable();
+    };
+
+    window.exportReportCsv = function() {
+        if (!reportRows.length) return;
+        const fmtNum = (base, bpd) => {
+            const d = base / bpd;
+            return Math.abs(d - Math.round(d)) < 0.005 ? Math.round(d) : d.toFixed(2);
+        };
+        const header = ['品項', '類別', '期初庫存', '入庫', '消耗', '回放', '期末庫存', '單位'];
+        const lines = reportRows.map(r => [
+            r.name, r.category,
+            fmtNum(r.opening, r.bpd), fmtNum(r.receive, r.bpd),
+            fmtNum(r.consume, r.bpd), fmtNum(r.ret, r.bpd),
+            fmtNum(r.closing, r.bpd), r.unit
+        ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
+        const csv = '﻿' + [header.join(','), ...lines].join('\r\n');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+        a.download = `庫存報表_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        URL.revokeObjectURL(a.href);
     };
 
     // pre-fill custom date inputs with today
