@@ -329,7 +329,7 @@
                 </div>
                 <div id="viImportArea" style="display:none;">
                     <p style="font-size:13px;color:#555;margin-bottom:6px;">將 Gemini 回傳的 JSON 貼到下方：</p>
-                    <textarea id="viImportText" rows="10" placeholder='[{"id":1,"name":"牛肉","nameVi":"Thịt bò"},...]'
+                    <textarea id="viImportText" rows="10" placeholder='[{"type":"category","name":"肉類","nameVi":"Thịt"},{"type":"item","id":1,"name":"牛肉","nameVi":"Thịt bò"},...]'
                         style="width:100%;font-size:13px;font-family:monospace;border:1px solid #ccc;border-radius:8px;padding:10px;resize:vertical;"></textarea>
                     <div style="display:flex;gap:8px;margin-top:8px;">
                         <button class="btn btn-primary" onclick="importViTranslations()">匯入</button>
@@ -764,22 +764,26 @@
         const items = [...inventoryData]
             .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
             .filter(i => !i.nameVi);
-        if (!items.length) {
-            showToast('所有品項都已有越南語名稱');
+        const cats = categories.filter(cat => !categoryTranslations[cat]);
+        if (!items.length && !cats.length) {
+            showToast('所有品項及分類都已有越南語翻譯');
             document.getElementById('viPromptArea').style.display = 'none';
             return;
         }
-        const list = JSON.stringify(items.map(i => ({ id: i.id, name: i.name })), null, 2);
+        const list = [
+            ...cats.map(cat => ({ type: "category", name: cat })),
+            ...items.map(i => ({ type: "item", id: i.id, name: i.name }))
+        ];
         const prompt =
-`請將以下餐廳食材／物品名稱翻譯成越南文。
+`請將以下餐廳食材／物品名稱及分類名稱翻譯成越南文。
 直接回傳 JSON 陣列，不要加任何說明或 markdown：
 
-${list}
+${JSON.stringify(list, null, 2)}
 
 回傳格式範例：
 [
-  {"id": 1, "name": "牛肉", "nameVi": "Thịt bò"},
-  {"id": 2, "name": "雞胸肉", "nameVi": "Thịt ức gà"}
+  {"type": "category", "name": "肉類", "nameVi": "Thịt"},
+  {"type": "item", "id": 1, "name": "牛肉", "nameVi": "Thịt bò"}
 ]`;
         document.getElementById('viPromptText').value = prompt;
         document.getElementById('viPromptArea').style.display = 'block';
@@ -812,24 +816,42 @@ ${list}
             msgEl.textContent = '⚠️ JSON 格式錯誤，請確認 Gemini 回傳的內容完整。';
             return;
         }
-        const updates = parsed.filter(r => r.id && r.nameVi?.trim());
-        if (!updates.length) {
+        // Support both new format (type field) and legacy format (id only = item)
+        const itemUpdates = parsed.filter(r => r.nameVi?.trim() && (r.type === 'item' || (!r.type && r.id)));
+        const catUpdates  = parsed.filter(r => r.nameVi?.trim() && r.type === 'category' && r.name);
+        if (!itemUpdates.length && !catUpdates.length) {
             msgEl.style.color = '#c62828';
-            msgEl.textContent = '⚠️ 找不到有效的翻譯資料（需要 id 和 nameVi 欄位）。';
+            msgEl.textContent = '⚠️ 找不到有效的翻譯資料（需要 nameVi 欄位）。';
             return;
         }
-        if (!confirm(`確定匯入 ${updates.length} 筆越南語翻譯？`)) return;
+        const confirmMsg = [
+            itemUpdates.length ? `${itemUpdates.length} 筆品項` : '',
+            catUpdates.length  ? `${catUpdates.length} 筆分類`  : ''
+        ].filter(Boolean).join('、');
+        if (!confirm(`確定匯入 ${confirmMsg}翻譯？`)) return;
         try {
-            await runItemTransaction(items => {
-                let count = 0;
-                updates.forEach(r => {
-                    const item = items.find(i => String(i.id) === String(r.id));
-                    if (item) { item.nameVi = r.nameVi.trim(); count++; }
+            let itemCount = 0;
+            if (itemUpdates.length) {
+                await runItemTransaction(items => {
+                    itemUpdates.forEach(r => {
+                        const item = items.find(i => String(i.id) === String(r.id));
+                        if (item) { item.nameVi = r.nameVi.trim(); itemCount++; }
+                    });
+                    if (!itemCount) return false;
                 });
-                if (!count) return false;
-            });
+            }
+            let catCount = 0;
+            if (catUpdates.length) {
+                const updatedMap = { ...categoryTranslations };
+                catUpdates.forEach(r => { updatedMap[r.name] = r.nameVi.trim(); catCount++; });
+                await setDoc(mainRef, { settings: { ...mainSettings, categoryTranslations: updatedMap } }, { merge: true });
+            }
+            const resultMsg = [
+                itemCount ? `${itemCount} 筆品項` : '',
+                catCount  ? `${catCount} 筆分類`  : ''
+            ].filter(Boolean).join('、');
             msgEl.style.color = '#2e7d32';
-            msgEl.textContent = `✅ 已匯入 ${updates.length} 筆翻譯。`;
+            msgEl.textContent = `✅ 已匯入 ${resultMsg}翻譯。`;
             document.getElementById('viImportText').value = '';
         } catch (e) {
             msgEl.style.color = '#c62828';
