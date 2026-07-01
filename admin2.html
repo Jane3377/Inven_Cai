@@ -224,17 +224,40 @@
             </div>
             <div class="form-group">
                 <label>分類 *</label>
-                <input type="text" id="editCategory" list="categoryDatalist" placeholder="例：肉類">
-                <datalist id="categoryDatalist"></datalist>
+                <select id="editCategory">
+                    <option value="">請選擇分類...</option>
+                </select>
+                <div class="help-text">如需新增分類，請至「分類管理」頁籤</div>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>儲存類型（自動帶入庫位）</label>
+                <select id="editStorageType" onchange="onStorageTypeChange()">
+                    <option value="冷凍">❄️ 冷凍</option>
+                    <option value="冷藏">🧊 冷藏</option>
+                    <option value="常溫">📦 常溫</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>📦 入庫至</label>
+                <select id="editReceiveLoc">
+                    <option value="warehouseFrozen">大倉冷凍</option>
+                    <option value="warehouseChilled">大倉冷藏</option>
+                    <option value="warehouseRoom">大倉常溫</option>
+                </select>
             </div>
         </div>
 
         <div class="form-group">
-            <label>儲存類型（快速套入庫位預設）</label>
-            <select id="editStorageType" onchange="onStorageTypeChange()">
-                <option value="冷凍">❄️ 冷凍</option>
-                <option value="冷藏">🧊 冷藏</option>
-                <option value="常溫">📦 常溫</option>
+            <label>📤 消耗從（該品項從哪個倉位出庫）</label>
+            <select id="editConsumeLoc">
+                <option value="warehouseFrozen">大倉冷凍</option>
+                <option value="warehouseChilled">大倉冷藏</option>
+                <option value="warehouseRoom">大倉常溫</option>
+                <option value="onsiteChilled">解凍冷藏</option>
+                <option value="prep">其他備貨</option>
             </select>
         </div>
 
@@ -263,65 +286,36 @@
 
         <div class="form-row">
             <div class="form-group">
-                <label>主要使用區</label>
-                <select id="editPrimaryStation">
-                    <option value="pizzaStation">比薩區</option>
-                    <option value="chickenStation">炸雞區</option>
-                </select>
-                <div class="help-text">消耗時從其他備貨移至此區</div>
-            </div>
-            <div class="form-group" id="enableThawWrap">
-                <label>需備料步驟</label>
+                <label>允許備料</label>
                 <div class="toggle-group">
-                    <label><input type="checkbox" id="enableThaw" onchange="onEnableThawChange()"> 開啟（僅冷凍品適用）</label>
+                    <label><input type="checkbox" id="enableThaw" onchange="onEnableThawChange()"> 開啟（預設關閉）</label>
                 </div>
-                <div class="help-text">開啟後員工可執行備料（大倉→備料區）</div>
+                <div class="help-text">開啟後員工可執行備料動作（大倉→備料區）</div>
             </div>
             <div class="form-group">
-                <label>允許回放</label>
-                <div class="toggle-group">
-                    <label><input type="checkbox" id="enableReturn"> 開啟（預設關閉）</label>
-                </div>
-                <div class="help-text">開啟後員工可將備貨退回大倉</div>
+                <label>🍕 備料至</label>
+                <select id="editIssueLoc">
+                    <option value="onsiteChilled">解凍冷藏</option>
+                    <option value="prep">其他備貨</option>
+                </select>
             </div>
         </div>
 
-        <div class="form-group">
-            <label>動作倉位</label>
-            <div style="display:flex;flex-direction:column;gap:10px;background:#f8f9fa;border-radius:8px;padding:12px;">
-                <div style="display:flex;align-items:center;gap:10px;font-size:13px;">
-                    <span style="width:72px;color:#555;flex-shrink:0;">📦 入庫至</span>
-                    <select id="editReceiveLoc" class="action-loc-select">
-                        <option value="warehouseFrozen">大倉冷凍</option>
-                        <option value="warehouseChilled">大倉冷藏</option>
-                        <option value="warehouseRoom">大倉常溫</option>
-                    </select>
+        <div class="form-row">
+            <div class="form-group">
+                <label>允許回放</label>
+                <div class="toggle-group">
+                    <label><input type="checkbox" id="enableReturn" onchange="onEnableReturnChange()"> 開啟（預設關閉）</label>
                 </div>
-                <div style="display:flex;align-items:center;gap:10px;font-size:13px;" id="issueLocRow">
-                    <span style="width:72px;color:#555;flex-shrink:0;">🍕 備料至</span>
-                    <select id="editIssueLoc" class="action-loc-select">
-                        <option value="onsiteChilled">解凍冷藏</option>
-                        <option value="prep">其他備貨</option>
-                    </select>
-                </div>
-                <div style="display:flex;align-items:center;gap:10px;font-size:13px;">
-                    <span style="width:72px;color:#555;flex-shrink:0;">📤 消耗從</span>
-                    <select id="editConsumeLoc" class="action-loc-select">
-                        <option value="warehouseFrozen">大倉冷凍</option>
-                        <option value="warehouseChilled">大倉冷藏</option>
-                        <option value="warehouseRoom">大倉常溫</option>
-                        <option value="onsiteChilled">解凍冷藏</option>
-                        <option value="prep">其他備貨</option>
-                    </select>
-                </div>
-                <div style="display:flex;align-items:center;gap:10px;font-size:13px;">
-                    <span style="width:72px;color:#555;flex-shrink:0;">↩️ 回放至</span>
-                    <select id="editReturnLoc" class="action-loc-select">
-                        <option value="warehouseFrozen">大倉冷凍</option>
-                        <option value="warehouseChilled">大倉冷藏</option>
-                        <option value="warehouseRoom">大倉常溫</option>
-                    </select>
-                </div>
+                <div class="help-text">開啟後員工可將備貨退回大倉</div>
+            </div>
+            <div class="form-group">
+                <label>↩️ 回放至</label>
+                <select id="editReturnLoc">
+                    <option value="warehouseFrozen">大倉冷凍</option>
+                    <option value="warehouseChilled">大倉冷藏</option>
+                    <option value="warehouseRoom">大倉常溫</option>
+                </select>
             </div>
         </div>
 
@@ -337,6 +331,14 @@
                     <option value="false">停用</option>
                 </select>
             </div>
+        </div>
+
+        <div class="form-group" style="opacity:0.45;pointer-events:none;">
+            <label>主要使用區（選填，暫不使用）</label>
+            <select id="editPrimaryStation">
+                <option value="pizzaStation">比薩區</option>
+                <option value="chickenStation">炸雞區</option>
+            </select>
         </div>
 
         <div class="modal-actions">
@@ -553,8 +555,13 @@
                 </div>`).join('')
             : '<div class="card-item" style="color:#999;">尚無分類</div>';
 
-        const dl = document.getElementById('categoryDatalist');
-        if (dl) dl.innerHTML = categories.map(c => `<option value="${esc(c)}"></option>`).join('');
+        const catSel = document.getElementById('editCategory');
+        if (catSel) {
+            const cur = catSel.value;
+            catSel.innerHTML = '<option value="">請選擇分類...</option>' +
+                categories.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+            if (cur) catSel.value = cur;
+        }
     }
 
     window.addCategory = function() {
@@ -594,17 +601,30 @@
         document.getElementById('editActive').value        = String(item?.active !== false);
 
         document.getElementById('editPrimaryStation').value = item?.primaryStation ?? 'pizzaStation';
-        document.getElementById('enableThaw').checked       = item?.enableThaw === true;
-        document.getElementById('enableReturn').checked     = item?.enableReturn === true;
+        const enableThawVal   = item?.enableThaw  === true;
+        const enableReturnVal = item?.enableReturn === true;
+        document.getElementById('enableThaw').checked   = enableThawVal;
+        document.getElementById('enableReturn').checked = enableReturnVal;
 
         const stType = item?.storageType ?? '冷凍';
         const preset = STORAGE_PRESETS[stType] || STORAGE_PRESETS['冷凍'];
         document.getElementById('editReceiveLoc').value = item?.defaultReceiveLocation ?? preset.receive;
-        document.getElementById('editIssueLoc').value   = item?.defaultIssueLocation   ?? (item?.enableThaw ? 'onsiteChilled' : preset.receive);
+        document.getElementById('editIssueLoc').value   = item?.defaultIssueLocation   ?? (enableThawVal ? 'onsiteChilled' : 'prep');
         document.getElementById('editConsumeLoc').value = item?.defaultConsumeLocation ?? 'prep';
         document.getElementById('editReturnLoc').value  = item?.defaultReturnLocation  ?? preset.receive;
 
+        // populate category select and set value
+        const catSel = document.getElementById('editCategory');
+        catSel.innerHTML = '<option value="">請選擇分類...</option>' +
+            categories.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+        const itemCat = item?.category ?? '';
+        if (itemCat && !categories.includes(itemCat)) {
+            catSel.innerHTML += `<option value="${esc(itemCat)}">${esc(itemCat)}</option>`;
+        }
+        catSel.value = itemCat;
+
         refreshThawVisibility();
+        refreshReturnVisibility();
         document.getElementById('itemModal').classList.add('open');
     };
 
@@ -612,30 +632,29 @@
         const storageType = document.getElementById('editStorageType').value;
         const preset = STORAGE_PRESETS[storageType] || STORAGE_PRESETS['冷凍'];
         document.getElementById('editReceiveLoc').value = preset.receive;
-        document.getElementById('editIssueLoc').value   = storageType === '冷凍' ? 'onsiteChilled' : 'prep';
         document.getElementById('editReturnLoc').value  = preset.receive;
-        refreshThawVisibility();
     };
 
     window.onEnableThawChange = function() {
         refreshThawVisibility();
     };
 
+    window.onEnableReturnChange = function() {
+        refreshReturnVisibility();
+    };
+
     function refreshThawVisibility() {
-        const storageType = document.getElementById('editStorageType').value;
         const enableThaw  = document.getElementById('enableThaw').checked;
-        const wrap        = document.getElementById('enableThawWrap');
-        const issueRow    = document.getElementById('issueLocRow');
-        if (storageType !== '冷凍') {
-            document.getElementById('enableThaw').checked = false;
-            wrap.style.opacity = '0.4';
-            wrap.style.pointerEvents = 'none';
-            issueRow.style.display = 'none';
-        } else {
-            wrap.style.opacity = '';
-            wrap.style.pointerEvents = '';
-            issueRow.style.display = enableThaw ? '' : 'none';
-        }
+        const issueSel    = document.getElementById('editIssueLoc');
+        issueSel.disabled = !enableThaw;
+        issueSel.style.opacity = enableThaw ? '' : '0.4';
+    }
+
+    function refreshReturnVisibility() {
+        const enableReturn = document.getElementById('enableReturn').checked;
+        const returnSel    = document.getElementById('editReturnLoc');
+        returnSel.disabled = !enableReturn;
+        returnSel.style.opacity = enableReturn ? '' : '0.4';
     }
 
     window.closeItemModal = function() {
@@ -645,7 +664,7 @@
     window.saveItem = function() {
         const idVal          = document.getElementById('editItemId').value;
         const name           = document.getElementById('editName').value.trim();
-        const category       = document.getElementById('editCategory').value.trim();
+        const category       = document.getElementById('editCategory').value;
         const storageType    = document.getElementById('editStorageType').value;
         const displayUnit    = document.getElementById('editDisplayUnit').value.trim();
         const baseUnit       = document.getElementById('editBaseUnit').value.trim();
