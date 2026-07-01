@@ -327,17 +327,18 @@
     const settingsRef = doc(db, "inventory", "settings");
 
     const LOCATION_DEFS = {
-        warehouseFrozen:  { name: "大倉冷凍",  short: "冷凍" },
-        warehouseChilled: { name: "大倉冷藏",  short: "冷藏" },
-        warehouseRoom:    { name: "大倉常溫",  short: "常溫" },
-        prep:             { name: "備貨區",    short: "備貨" },
-        onsiteChilled:    { name: "現場冷藏",  short: "現場冷藏" },
-        onsiteRoom:       { name: "現場常溫",  short: "現場常溫" }
+        warehouseFrozen:  { name: "大倉冷凍", short: "冷凍", group: "大倉" },
+        warehouseChilled: { name: "大倉冷藏", short: "冷藏", group: "大倉" },
+        warehouseRoom:    { name: "大倉常溫", short: "常溫", group: "大倉" },
+        onsiteChilled:    { name: "解凍冷藏", short: "解凍", group: "備貨" },
+        prep:             { name: "其他備貨", short: "備貨", group: "備貨" },
+        pizzaStation:     { name: "比薩區",   short: "比薩", group: "使用區" },
+        chickenStation:   { name: "炸雞區",   short: "炸雞", group: "使用區" },
     };
     const STORAGE_PRESETS = {
-        冷凍: { receive: "warehouseFrozen",  issue: "onsiteChilled", consume: "prep",       return: "warehouseFrozen",  allowed: ["warehouseFrozen", "prep", "onsiteChilled"] },
-        冷藏: { receive: "warehouseChilled", issue: "onsiteChilled", consume: "prep",       return: "warehouseChilled", allowed: ["warehouseChilled", "prep", "onsiteChilled"] },
-        常溫: { receive: "warehouseRoom",    issue: "onsiteRoom",    consume: "onsiteRoom", return: "warehouseRoom",    allowed: ["warehouseRoom", "onsiteRoom"] }
+        冷凍: { receive: "warehouseFrozen",  issue: "onsiteChilled", consume: "prep", return: "warehouseFrozen",  allowed: ["warehouseFrozen", "prep"] },
+        冷藏: { receive: "warehouseChilled", issue: "onsiteChilled", consume: "prep", return: "warehouseChilled", allowed: ["warehouseChilled", "prep"] },
+        常溫: { receive: "warehouseRoom",    issue: "prep",          consume: "prep", return: "warehouseRoom",    allowed: ["warehouseRoom", "prep"] }
     };
     const DEFAULT_CATEGORIES = ['肉類','海鮮','臘腸','薯條起司','蔬菜','罐頭類','飲料','粉','醬料','外帶醬料','包材','衛生用品','清潔用品'];
 
@@ -357,6 +358,7 @@
         const thresholdDisplay = nn(item.thresholdDisplay ?? item.thresholdBase ?? item.threshold, 0);
         const locs = {};
         Object.keys(LOCATION_DEFS).forEach(k => { locs[k] = nn(item.locations?.[k], 0); });
+        locs.onsiteRoom = 0; // 舊欄位廢棄
         if (!item.locations) {
             locs[preset.receive] = nn(item.freezerStock, 0);
             if (preset.issue !== preset.receive) locs[preset.issue] = nn(item.chillerStock, 0);

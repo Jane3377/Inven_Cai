@@ -297,10 +297,10 @@
                 <thead>
                     <tr>
                         <th style="width:6%;">類別</th>
-                        <th style="text-align:left;width:16%;">食材 / 物品</th>
+                        <th style="text-align:left;width:15%;">食材 / 物品</th>
                         <th style="width:12%;">大倉</th>
-                        <th style="width:11%;">現場</th>
-                        <th style="width:9%;">備貨</th>
+                        <th style="width:12%;">備貨</th>
+                        <th style="width:9%;">使用區</th>
                         <th style="width:9%;">提醒</th>
                         <th style="width:12%;">數量</th>
                         <th style="width:25%;">動作</th>
@@ -501,14 +501,18 @@ const firebaseConfig = {
 
     const SCHEMA_VERSION = 2;
     const WAREHOUSE_KEYS = ["warehouseFrozen", "warehouseChilled", "warehouseRoom"];
-    const ONSITE_KEYS = ["onsiteChilled", "onsiteRoom"];
+    const PREP_KEYS      = ["onsiteChilled", "prep"];
+    const STATION_KEYS   = ["pizzaStation", "chickenStation"];
+    const STOCK_KEYS     = [...WAREHOUSE_KEYS, ...PREP_KEYS]; // 計入庫存（大倉＋備貨）
+    const ONSITE_KEYS    = PREP_KEYS; // 舊名相容
     const LOCATION_DEFS = {
-        warehouseFrozen: { id: "warehouseFrozen", name: "大倉冷凍", short: "冷凍", group: "大倉" },
+        warehouseFrozen:  { id: "warehouseFrozen",  name: "大倉冷凍", short: "冷凍", group: "大倉" },
         warehouseChilled: { id: "warehouseChilled", name: "大倉冷藏", short: "冷藏", group: "大倉" },
-        warehouseRoom: { id: "warehouseRoom", name: "大倉常溫", short: "常溫", group: "大倉" },
-        prep: { id: "prep", name: "備貨區", short: "備貨", group: "備貨" },
-        onsiteChilled: { id: "onsiteChilled", name: "現場冷藏", short: "現場冷藏", group: "現場" },
-        onsiteRoom: { id: "onsiteRoom", name: "現場常溫", short: "現場常溫", group: "現場" }
+        warehouseRoom:    { id: "warehouseRoom",    name: "大倉常溫", short: "常溫", group: "大倉" },
+        onsiteChilled:    { id: "onsiteChilled",    name: "解凍冷藏", short: "解凍", group: "備貨" },
+        prep:             { id: "prep",             name: "其他備貨", short: "備貨", group: "備貨" },
+        pizzaStation:     { id: "pizzaStation",     name: "比薩區",   short: "比薩", group: "使用區" },
+        chickenStation:   { id: "chickenStation",   name: "炸雞區",   short: "炸雞", group: "使用區" },
     };
 
     let inventoryData = [];
@@ -597,6 +601,7 @@ const firebaseConfig = {
         Object.keys(LOCATION_DEFS).forEach(key => {
             item.locations[key] = normalizeNumber(item.locations[key], 0);
         });
+        item.locations.onsiteRoom = 0; // 舊欄位廢棄，歸零
         if (!raw.locations) {
             const freezerBase = normalizeNumber(raw.freezerStock, 0) * item.basePerDisplay;
             const chillerBase = normalizeNumber(raw.chillerStock, 0) * item.basePerDisplay;
@@ -617,9 +622,9 @@ const firebaseConfig = {
 
     function updateLegacyStockFields(item) {
         const warehouseBase = sumLocations(item, WAREHOUSE_KEYS);
-        const onsiteBase = sumLocations(item, ONSITE_KEYS);
+        const prepBase = sumLocations(item, PREP_KEYS);
         item.freezerStock = toDisplayQty(item, warehouseBase);
-        item.chillerStock = toDisplayQty(item, onsiteBase);
+        item.chillerStock = toDisplayQty(item, prepBase);
         item.unit = item.displayUnit;
         return item;
     }
@@ -785,7 +790,7 @@ const firebaseConfig = {
     }
 
     function lowStockItems() {
-        return inventoryData.filter(item => item.active !== false && sumLocations(item, WAREHOUSE_KEYS) <= item.thresholdBase);
+        return inventoryData.filter(item => item.active !== false && sumLocations(item, STOCK_KEYS) <= item.thresholdBase);
     }
 
     function renderInventory() {
@@ -796,7 +801,7 @@ const firebaseConfig = {
         const items = filteredItems();
         const lows = lowStockItems();
         if (lows.length > 0) {
-            alertList.innerHTML = lows.map(item => `<li>【${escapeHtml(item.category)}】${escapeHtml(item.name)}：大倉區剩餘 <strong>${formatQty(item, sumLocations(item, WAREHOUSE_KEYS))}</strong>，安全線 ${formatQty(item, item.thresholdBase)}</li>`).join("");
+            alertList.innerHTML = lows.map(item => `<li>【${escapeHtml(item.category)}】${escapeHtml(item.name)}：總庫存剩餘 <strong>${formatQty(item, sumLocations(item, STOCK_KEYS))}</strong>，安全線 ${formatQty(item, item.thresholdBase)}</li>`).join("");
             alertBox.style.display = "block";
         } else {
             alertBox.style.display = "none";
@@ -821,7 +826,7 @@ const firebaseConfig = {
     }
 
     function renderTableRow(item) {
-        const warehouseBase = sumLocations(item, WAREHOUSE_KEYS);
+        const warehouseBase = sumLocations(item, STOCK_KEYS);
         const isLow = item.active !== false && warehouseBase <= item.thresholdBase;
         const dis = item.active === false ? "disabled" : "";
         const hasBase = item.allowBaseInput && item.baseUnit !== item.displayUnit;
@@ -838,8 +843,8 @@ const firebaseConfig = {
                 <td><span class="badge badge-muted">${escapeHtml(item.category)}</span></td>
                 <td class="name-cell"><strong>${escapeHtml(item.name)}</strong><div class="help">${escapeHtml(item.basePerDisplay)} ${escapeHtml(item.baseUnit)} = 1 ${escapeHtml(item.displayUnit)}</div></td>
                 <td>${renderLocationStack(item, WAREHOUSE_KEYS)}</td>
-                <td>${renderLocationStack(item, ONSITE_KEYS)}</td>
-                <td>${renderLocationStack(item, ["prep"])}</td>
+                <td>${renderLocationStack(item, PREP_KEYS)}</td>
+                <td>${renderLocationStack(item, STATION_KEYS)}</td>
                 <td>${item.active === false
                     ? '<span class="badge badge-off">停用</span>'
                     : isLow
@@ -880,9 +885,9 @@ const firebaseConfig = {
     }
 
     function renderMobileCard(item) {
-        const warehouseBase = sumLocations(item, WAREHOUSE_KEYS);
+        const warehouseBase = sumLocations(item, STOCK_KEYS);
         const isLow = item.active !== false && warehouseBase <= item.thresholdBase;
-        const locKeys = [...WAREHOUSE_KEYS, "prep", ...ONSITE_KEYS].filter(key => item.allowedLocations.includes(key) || normalizeNumber(item.locations?.[key], 0) > 0);
+        const locKeys = [...WAREHOUSE_KEYS, ...PREP_KEYS, ...STATION_KEYS].filter(key => item.allowedLocations.includes(key) || normalizeNumber(item.locations?.[key], 0) > 0);
         const dis = item.active === false ? "disabled" : "";
         return `
             <article class="item-card ${item.active === false ? "inactive-row" : ""}">
@@ -1164,7 +1169,7 @@ const firebaseConfig = {
     };
 
     function renderModalStockPreview(item) {
-        const keys = [...WAREHOUSE_KEYS, "prep", ...ONSITE_KEYS].filter(key => item.allowedLocations.includes(key) || normalizeNumber(item.locations?.[key], 0) > 0);
+        const keys = [...WAREHOUSE_KEYS, ...PREP_KEYS, ...STATION_KEYS].filter(key => item.allowedLocations.includes(key) || normalizeNumber(item.locations?.[key], 0) > 0);
         document.getElementById("modalStockPreview").innerHTML = keys.map(key => `<div class="location-tile"><div class="loc">${LOCATION_DEFS[key].name}</div><div class="qty">${formatQty(item, normalizeNumber(item.locations?.[key], 0))}</div></div>`).join("");
     }
 
@@ -1293,8 +1298,8 @@ const firebaseConfig = {
                 <td><span class="badge badge-muted">${escapeHtml(item.category)}</span></td>
                 <td class="name-cell"><strong>${escapeHtml(item.name)}</strong><div class="help">${escapeHtml(item.basePerDisplay)} ${escapeHtml(item.baseUnit)} = 1 ${escapeHtml(item.displayUnit)}</div></td>
                 <td>${renderCountLocInputs(item, WAREHOUSE_KEYS)}</td>
-                <td>${renderCountLocInputs(item, ["prep"])}</td>
-                <td>${renderCountLocInputs(item, ONSITE_KEYS)}</td>
+                <td>${renderCountLocInputs(item, PREP_KEYS)}</td>
+                <td>${renderCountLocInputs(item, STATION_KEYS)}</td>
                 <td><button class="count-table-confirm-btn" type="button" onclick="submitItemCount(${item.id})">✓ 確認</button></td>
             </tr>`).join("");
 
@@ -1326,9 +1331,9 @@ const firebaseConfig = {
                     <thead><tr>
                         <th style="width:8%">類別</th>
                         <th style="text-align:left;width:20%">食材 / 物品</th>
-                        <th style="width:22%">大倉區</th>
-                        <th style="width:15%">備貨區</th>
-                        <th style="width:20%">現場區</th>
+                        <th style="width:22%">大倉</th>
+                        <th style="width:22%">備貨</th>
+                        <th style="width:13%">使用區</th>
                         <th style="width:15%">確認</th>
                     </tr></thead>
                     <tbody>${tableRows}</tbody>
