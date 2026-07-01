@@ -667,6 +667,15 @@ const firebaseConfig = {
         return [...set];
     }
 
+    function itemDisplayName(item) {
+        return currentLang === 'vi' && item.nameVi ? item.nameVi : item.name;
+    }
+
+    function itemDisplayCategory(cat) {
+        if (currentLang !== 'vi') return cat;
+        return (settings.categoryTranslations || {})[cat] || cat;
+    }
+
     function toDisplayQty(item, baseQty) {
         const per = normalizeNumber(item.basePerDisplay, 1) || 1;
         return roundQty(baseQty / per);
@@ -796,7 +805,7 @@ const firebaseConfig = {
             if (!showInactive && item.active === false) return false;
             if (currentCategoryFilter !== "全部" && item.category !== currentCategoryFilter) return false;
             if (!q) return true;
-            return [item.name, item.category, item.displayUnit, item.baseUnit].join(" ").toLowerCase().includes(q);
+            return [item.name, item.nameVi || '', item.category, item.displayUnit, item.baseUnit].join(" ").toLowerCase().includes(q);
         });
     }
 
@@ -811,7 +820,7 @@ const firebaseConfig = {
         const cats = getAllCategories();
         if (!cats.includes(currentCategoryFilter)) currentCategoryFilter = "全部";
         wrap.innerHTML = cats.map(cat => {
-            const display = cat === '全部' ? t('cat_all') : escapeHtml(cat);
+            const display = cat === '全部' ? t('cat_all') : escapeHtml(itemDisplayCategory(cat));
             return `<button class="filter-btn ${cat === currentCategoryFilter ? "active" : ""}" type="button" onclick="filterCategory('${escapeHtml(cat)}')">${display}</button>`;
         }).join("");
         const datalist = document.getElementById("categoryList");
@@ -830,7 +839,7 @@ const firebaseConfig = {
         const items = filteredItems();
         const lows = lowStockItems();
         if (lows.length > 0) {
-            alertList.innerHTML = lows.map(item => `<li>【${escapeHtml(item.category)}】${escapeHtml(item.name)}：總庫存剩餘 <strong>${formatQty(item, sumLocations(item, itemStockKeys(item)))}</strong>，安全線 ${formatQty(item, item.thresholdBase)}</li>`).join("");
+            alertList.innerHTML = lows.map(item => `<li>【${escapeHtml(itemDisplayCategory(item.category))}】${escapeHtml(itemDisplayName(item))}：總庫存剩餘 <strong>${formatQty(item, sumLocations(item, itemStockKeys(item)))}</strong>，安全線 ${formatQty(item, item.thresholdBase)}</li>`).join("");
             alertBox.style.display = "block";
         } else {
             alertBox.style.display = "none";
@@ -895,8 +904,8 @@ const firebaseConfig = {
         ];
         return `
             <tr class="${isLow ? "low-stock" : ""} ${item.active === false ? "inactive-row" : ""}">
-                <td><span class="badge badge-muted">${escapeHtml(item.category)}</span></td>
-                <td class="name-cell"><strong>${escapeHtml(item.name)}</strong><div class="help">${escapeHtml(item.basePerDisplay)} ${escapeHtml(item.baseUnit)} = 1 ${escapeHtml(item.displayUnit)}</div></td>
+                <td><span class="badge badge-muted">${escapeHtml(itemDisplayCategory(item.category))}</span></td>
+                <td class="name-cell"><strong>${escapeHtml(itemDisplayName(item))}</strong><div class="help">${escapeHtml(item.basePerDisplay)} ${escapeHtml(item.baseUnit)} = 1 ${escapeHtml(item.displayUnit)}</div></td>
                 <td>${renderLocationStack(item, WAREHOUSE_KEYS)}</td>
                 <td>${item.enableThaw ? renderSingleLocationCell(item, item.defaultIssueLocation) : '<div class="stock-stack" style="color:#ccc;font-size:12px;">—</div>'}</td>
                 <td>${item.active === false
@@ -958,7 +967,7 @@ const firebaseConfig = {
         return `
             <article class="item-card ${item.active === false ? "inactive-row" : ""}">
                 <div class="card-head">
-                    <div><div class="card-title">${escapeHtml(item.name)}</div><div class="card-meta">${escapeHtml(item.category)}｜${escapeHtml(item.basePerDisplay)} ${escapeHtml(item.baseUnit)} = 1 ${escapeHtml(item.displayUnit)}</div></div>
+                    <div><div class="card-title">${escapeHtml(itemDisplayName(item))}</div><div class="card-meta">${escapeHtml(itemDisplayCategory(item.category))}｜${escapeHtml(item.basePerDisplay)} ${escapeHtml(item.baseUnit)} = 1 ${escapeHtml(item.displayUnit)}</div></div>
                     ${item.active === false ? `<span class="badge badge-off">${t('badge_off')}</span>` : isLow ? `<span class="badge badge-low">${t('badge_low_s')}</span>` : `<span class="badge badge-ok">${t('badge_ok_s')}</span>`}
                 </div>
                 <div class="location-grid">${locKeys.map(key => `<div class="location-tile"><div class="loc">${LOCATION_DEFS[key].name}</div><div class="qty">${formatQty(item, normalizeNumber(item.locations?.[key], 0))}</div></div>`).join("")}</div>
@@ -1407,8 +1416,8 @@ const firebaseConfig = {
 
         const tableRows = items.map(item => `
             <tr id="count-tr-${item.id}">
-                <td><span class="badge badge-muted">${escapeHtml(item.category)}</span></td>
-                <td class="name-cell"><strong>${escapeHtml(item.name)}</strong><div class="help">${escapeHtml(item.basePerDisplay)} ${escapeHtml(item.baseUnit)} = 1 ${escapeHtml(item.displayUnit)}</div></td>
+                <td><span class="badge badge-muted">${escapeHtml(itemDisplayCategory(item.category))}</span></td>
+                <td class="name-cell"><strong>${escapeHtml(itemDisplayName(item))}</strong><div class="help">${escapeHtml(item.basePerDisplay)} ${escapeHtml(item.baseUnit)} = 1 ${escapeHtml(item.displayUnit)}</div></td>
                 <td>${renderCountLocInputs(item, WAREHOUSE_KEYS)}</td>
                 <td>${renderCountLocInputs(item, PREP_KEYS)}</td>
                 <td><button class="count-table-confirm-btn" type="button" onclick="submitItemCount(${item.id})">${t('count_confirm_btn')}</button></td>
@@ -1427,9 +1436,9 @@ const firebaseConfig = {
             }).join("");
             return `<div class="count-card" id="count-card-${item.id}">
                 <div class="count-card-head">
-                    <div><div class="count-card-title">${escapeHtml(item.name)}</div>
-                    <div style="font-size:12px;color:#8a9690;margin-top:2px;">${escapeHtml(item.category)}｜以 ${escapeHtml(item.displayUnit)} 為單位輸入</div></div>
-                    <span class="badge badge-muted">${escapeHtml(item.category)}</span>
+                    <div><div class="count-card-title">${escapeHtml(itemDisplayName(item))}</div>
+                    <div style="font-size:12px;color:#8a9690;margin-top:2px;">${escapeHtml(itemDisplayCategory(item.category))}｜以 ${escapeHtml(item.displayUnit)} 為單位輸入</div></div>
+                    <span class="badge badge-muted">${escapeHtml(itemDisplayCategory(item.category))}</span>
                 </div>
                 ${locRows}
                 <button class="count-confirm-btn" type="button" onclick="submitItemCount(${item.id})">✓ 確認此品項</button>

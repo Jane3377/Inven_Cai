@@ -277,6 +277,12 @@
                     <button class="btn btn-outline" style="color:#c62828;border-color:#c62828;" onclick="cleanupOldLogs()">清理 6 個月前記錄</button>
                 </div>
             </div>
+            <div class="settings-card" style="grid-column: 1 / -1;">
+                <h3>分類越南語對照</h3>
+                <p style="font-size:13px;color:#666;margin-bottom:14px;">設定各分類的越南語顯示名稱。員工切換越南語系（VI）後，分類篩選按鈕會顯示對應翻譯。</p>
+                <div id="catTransContainer"></div>
+                <button class="btn btn-primary" style="margin-top:12px;" onclick="saveCatTranslations()">儲存翻譯</button>
+            </div>
         </div>
     </div>
 </div>
@@ -299,6 +305,12 @@
                 </select>
                 <div class="help-text">如需新增分類，請至「分類管理」頁籤</div>
             </div>
+        </div>
+
+        <div class="form-group">
+            <label>越南語名稱（選填）</label>
+            <input type="text" id="editNameVi" placeholder="Tên tiếng Việt（không bắt buộc）">
+            <div class="help-text">員工切換越南語系後，庫存頁面會顯示此名稱</div>
         </div>
 
         <div class="form-row">
@@ -464,10 +476,12 @@
         冷藏: { receive: "warehouseChilled", return: "warehouseChilled" },
         常溫: { receive: "warehouseRoom",    return: "warehouseRoom"    }
     };
-    let inventoryData = [];
-    let categories    = [];
-    let adminPin      = "1234";
-    let countPin      = "";
+    let inventoryData        = [];
+    let categories           = [];
+    let adminPin             = "1234";
+    let countPin             = "";
+    let mainSettings         = {};
+    let categoryTranslations = {};
     let reportPreset  = 'today';
     let reportRows    = [];
     let reportSort    = { col: null, dir: 1 };
@@ -510,11 +524,16 @@
         if (snap.exists()) {
             const data = snap.data();
             inventoryData = (data.items || []).map(normalizeItem);
+            mainSettings  = data.settings || {};
+            categoryTranslations = mainSettings.categoryTranslations || {};
         } else {
             inventoryData = [];
+            mainSettings  = {};
+            categoryTranslations = {};
         }
         renderItems();
         refreshReportCategories();
+        renderCatTranslations();
     });
 
     onSnapshot(settingsRef, snap => {
@@ -634,6 +653,7 @@
                 categories.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
             if (cur) catSel.value = cur;
         }
+        renderCatTranslations();
     }
 
     window.addCategory = function() {
@@ -657,12 +677,48 @@
             .catch(e => alert('儲存失敗：' + e.message));
     };
 
+    // ── Category Translations ─────────────────────────────
+    function renderCatTranslations() {
+        const container = document.getElementById('catTransContainer');
+        if (!container) return;
+        if (!categories.length) {
+            container.innerHTML = '<p style="color:#999;font-size:13px;">尚無分類，請先在「分類管理」新增分類。</p>';
+            return;
+        }
+        container.innerHTML = categories.map(cat => `
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                <span style="min-width:90px;font-size:14px;color:#333;">${esc(cat)}</span>
+                <span style="color:#bbb;font-size:13px;">→</span>
+                <input type="text" class="cat-trans-input" data-cat="${esc(cat)}"
+                    placeholder="Tiếng Việt（不填則原樣顯示）"
+                    value="${esc(categoryTranslations[cat] || '')}"
+                    style="flex:1;padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:14px;font-family:inherit;">
+            </div>`).join('');
+    }
+
+    window.saveCatTranslations = async function() {
+        const inputs = document.querySelectorAll('.cat-trans-input');
+        const map = {};
+        inputs.forEach(input => {
+            const cat = input.dataset.cat;
+            const val = input.value.trim();
+            if (val) map[cat] = val;
+        });
+        try {
+            await setDoc(mainRef, { settings: { ...mainSettings, categoryTranslations: map } }, { merge: true });
+            showToast('✅ 翻譯已儲存');
+        } catch (e) {
+            alert('儲存失敗：' + e.message);
+        }
+    };
+
     // ── Item Editor ───────────────────────────────────────
     window.openItemEditor = function(itemId = null) {
         const item = itemId != null ? inventoryData.find(i => String(i.id) === String(itemId)) : null;
         document.getElementById('itemModalTitle').textContent = item ? '編輯品項' : '新增品項';
         document.getElementById('editItemId').value        = item?.id ?? '';
         document.getElementById('editName').value          = item?.name ?? '';
+        document.getElementById('editNameVi').value        = item?.nameVi ?? '';
         document.getElementById('editCategory').value      = item?.category ?? '';
         document.getElementById('editStorageType').value   = item?.storageType ?? '冷凍';
         document.getElementById('editDisplayUnit').value   = item?.displayUnit ?? '包';
@@ -737,6 +793,7 @@
     window.saveItem = function() {
         const idVal          = document.getElementById('editItemId').value;
         const name           = document.getElementById('editName').value.trim();
+        const nameVi         = document.getElementById('editNameVi').value.trim();
         const category       = document.getElementById('editCategory').value;
         const storageType    = document.getElementById('editStorageType').value;
         const displayUnit    = document.getElementById('editDisplayUnit').value.trim();
@@ -764,7 +821,7 @@
 
         const patch = {
             id: idVal ? nn(idVal) : Date.now(),
-            name, category, storageType, displayUnit, baseUnit, basePerDisplay,
+            name, ...(nameVi ? { nameVi } : {}), category, storageType, displayUnit, baseUnit, basePerDisplay,
             thresholdDisplay: thresholdDisp,
             thresholdBase: thresholdDisp * basePerDisplay,
             enableThaw, enableReturn, primaryStation,
