@@ -183,8 +183,6 @@
         .card-act-btn { padding: 10px 6px; border-radius: 12px; font-size: 14px; font-weight: 800; background: #fff; cursor: pointer; transition: background 0.15s, color 0.15s; }
         .card-act-btn.act-consume { border: 1.5px solid var(--danger-color); color: var(--danger-color); }
         .card-act-btn.act-consume.active { background: var(--danger-color); color: #fff; }
-        .card-act-btn.act-receive { border: 1.5px solid var(--primary-color); color: var(--primary-color); }
-        .card-act-btn.act-receive.active { background: var(--primary-color); color: #fff; }
         .card-act-btn.act-prep { border: 1.5px solid #006064; color: #006064; }
         .card-act-btn.act-prep.active { background: #006064; color: #fff; }
         .card-act-btn.act-return { border: 1.5px solid var(--warning-color); color: var(--warning-color); }
@@ -247,7 +245,6 @@
         .qact-btns { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
         .qact-btn { padding: 7px 10px; border: 0; border-radius: 9px; font-size: 13px; font-weight: 800; cursor: pointer; white-space: nowrap; }
         .qact-btn:disabled { opacity: 0.38; cursor: not-allowed; }
-        .qact-receive { background: #e8f5e9; color: #2e7d32; }
         .qact-prep    { background: #e0f2f1; color: #006064; }
         .qact-consume { background: #ffebee; color: #c62828; }
         .qact-return  { background: #fff3e0; color: #e65100; }
@@ -286,7 +283,6 @@
             <input id="searchInput" class="search-input" type="search" placeholder="搜尋品項、分類或單位…" oninput="renderInventory()">
             <div class="chip-row">
                 <label class="chip"><input id="showInactive" type="checkbox" onchange="renderInventory()"> 顯示停用品項</label>
-                <button class="btn btn-secondary btn-small" type="button" onclick="openActionModal(null, 'receive')">快速進貨</button>
             </div>
         </div>
 
@@ -502,8 +498,6 @@ const firebaseConfig = {
     const WAREHOUSE_KEYS = ["warehouseFrozen", "warehouseChilled", "warehouseRoom"];
     const PREP_KEYS      = ["onsiteChilled", "prep"];
     const STATION_KEYS   = ["pizzaStation", "chickenStation"];
-    const STOCK_KEYS     = [...WAREHOUSE_KEYS, ...PREP_KEYS]; // 計入庫存（大倉＋備貨）
-    const ONSITE_KEYS    = PREP_KEYS; // 舊名相容
     const LOCATION_DEFS = {
         warehouseFrozen:  { id: "warehouseFrozen",  name: "大倉冷凍", short: "冷凍", group: "大倉" },
         warehouseChilled: { id: "warehouseChilled", name: "大倉冷藏", short: "冷藏", group: "大倉" },
@@ -846,10 +840,8 @@ const firebaseConfig = {
         const receiveLoc  = LOCATION_DEFS[item.defaultReceiveLocation]?.short || item.defaultReceiveLocation;
         const issueLoc    = LOCATION_DEFS[item.defaultIssueLocation]?.short   || item.defaultIssueLocation;
         const consumeFrom = LOCATION_DEFS[item.defaultConsumeLocation]?.short || item.defaultConsumeLocation;
-        const stationName = LOCATION_DEFS[item.primaryStation]?.name          || item.primaryStation;
         const retLoc      = LOCATION_DEFS[item.defaultReturnLocation]?.short  || item.defaultReturnLocation || receiveLoc;
         const infoLines = [
-            `入庫 → ${receiveLoc}`,
             ...(item.enableThaw ? [`備料 ${receiveLoc} → ${issueLoc}`] : []),
             `消耗 ${consumeFrom} → 出庫`,
             ...(item.enableReturn ? [`回放 ${consumeFrom} → ${retLoc}`] : []),
@@ -874,7 +866,6 @@ const firebaseConfig = {
                 </td>
                 <td class="qact-td">
                     <div class="qact-btns">
-                        <button class="qact-btn qact-receive" type="button" ${dis} onclick="execQuickAction(${item.id},'receive')">入庫</button>
                         ${item.enableThaw ? `<button class="qact-btn qact-prep" type="button" ${dis} onclick="execQuickAction(${item.id},'prep')">備料</button>` : ""}
                         <button class="qact-btn qact-consume" type="button" ${dis} onclick="execQuickAction(${item.id},'consume')">消耗</button>
                         ${item.enableReturn ? `<button class="qact-btn qact-return" type="button" ${dis} onclick="execQuickAction(${item.id},'return')">回放</button>` : ""}
@@ -916,7 +907,6 @@ const firebaseConfig = {
                 </div>
                 <div class="location-grid">${locKeys.map(key => `<div class="location-tile"><div class="loc">${LOCATION_DEFS[key].name}</div><div class="qty">${formatQty(item, normalizeNumber(item.locations?.[key], 0))}</div></div>`).join("")}</div>
                 <div class="card-actions">
-                    <button class="card-act-btn act-receive" id="actbtn-receive-${item.id}" type="button" ${dis} onclick="toggleCardAction(${item.id},'receive')">📦 入庫</button>
                     ${item.enableThaw ? `<button class="card-act-btn act-prep" id="actbtn-prep-${item.id}" type="button" ${dis} onclick="toggleCardAction(${item.id},'prep')">🍕 備料</button>` : ""}
                     <button class="card-act-btn act-consume" id="actbtn-consume-${item.id}" type="button" ${dis} onclick="toggleCardAction(${item.id},'consume')">📤 消耗</button>
                     ${item.enableReturn ? `<button class="card-act-btn act-return" id="actbtn-return-${item.id}" type="button" ${dis} onclick="toggleCardAction(${item.id},'return')">↩️ 回放</button>` : ""}
@@ -941,10 +931,7 @@ const firebaseConfig = {
             const recLoc   = it.defaultReceiveLocation;
             const retLoc   = it.defaultReturnLocation || recLoc;
             const station  = it.primaryStation || "pizzaStation";
-            if (type === "receive") {
-                it.locations[recLoc] = roundQty(normalizeNumber(it.locations[recLoc], 0) + baseQty);
-                pushLog(txLogs, `📦 進貨入庫：【${it.name}】${LOCATION_DEFS[recLoc].name} +${qtyText}`, { itemId: it.id, actionType: type, baseQty, toLocation: recLoc });
-            } else if (type === "prep") {
+            if (type === "prep") {
                 const fromLoc = recLoc;
                 const toLoc   = it.defaultIssueLocation || "onsiteChilled";
                 if (normalizeNumber(it.locations[fromLoc], 0) < baseQty) { alert(`${LOCATION_DEFS[fromLoc]?.name || fromLoc} 存量不足。`); return false; }
@@ -991,7 +978,7 @@ const firebaseConfig = {
         const panel = document.getElementById(`card-panel-${itemId}`);
         if (!panel) return;
         const current = cardPanelState[itemId];
-        ["receive", "prep", "consume", "return"].forEach(t => document.getElementById(`actbtn-${t}-${itemId}`)?.classList.remove("active"));
+        ["prep", "consume", "return"].forEach(t => document.getElementById(`actbtn-${t}-${itemId}`)?.classList.remove("active"));
         if (current === type) {
             cardPanelState[itemId] = null;
             panel.classList.add("hidden");
@@ -1018,14 +1005,6 @@ const firebaseConfig = {
                 <div class="unit-chips">${unitChips}</div>
             </div>
             <input class="panel-note" type="text" id="card-note-${item.id}" placeholder="備註（選填）">`;
-
-        if (type === "receive") {
-            const loc = LOCATION_DEFS[item.defaultReceiveLocation];
-            return `
-                <div class="panel-row"><span class="panel-label">入庫至</span><span class="panel-loc-info" style="background:#e8f5e9;color:#2e7d32;">${loc?.name || item.defaultReceiveLocation}</span></div>
-                ${qtyRow}
-                <button class="panel-submit" type="button" style="background:#2e7d32;color:#fff;" onclick="submitCardAction(${item.id},'receive')">✅ 確認入庫</button>`;
-        }
 
         if (type === "prep") {
             const fromDef = LOCATION_DEFS[item.defaultReceiveLocation];
@@ -1078,10 +1057,7 @@ const firebaseConfig = {
             const recLoc   = it.defaultReceiveLocation;
             const retLoc   = it.defaultReturnLocation || recLoc;
             const station  = it.primaryStation || "pizzaStation";
-            if (type === "receive") {
-                it.locations[recLoc] = roundQty(normalizeNumber(it.locations[recLoc], 0) + baseQty);
-                pushLog(txLogs, `📦 進貨入庫：【${it.name}】${LOCATION_DEFS[recLoc]?.name || recLoc} +${qtyText}${noteText}`, { itemId: it.id, actionType: type, baseQty, toLocation: recLoc });
-            } else if (type === "prep") {
+            if (type === "prep") {
                 const fromLoc = recLoc;
                 const toLoc   = it.defaultIssueLocation || "onsiteChilled";
                 if (normalizeNumber(it.locations[fromLoc], 0) < baseQty) { alert(`${LOCATION_DEFS[fromLoc]?.name || fromLoc} 存量不足。`); return false; }
@@ -1103,7 +1079,7 @@ const firebaseConfig = {
             }
         }).then(() => {
             cardPanelState[itemId] = null;
-            ["receive", "prep", "consume", "return"].forEach(t => document.getElementById(`actbtn-${t}-${itemId}`)?.classList.remove("active"));
+            ["prep", "consume", "return"].forEach(t => document.getElementById(`actbtn-${t}-${itemId}`)?.classList.remove("active"));
             const panel = document.getElementById(`card-panel-${itemId}`);
             if (panel) { panel.classList.add("hidden"); panel.innerHTML = ""; }
         });
