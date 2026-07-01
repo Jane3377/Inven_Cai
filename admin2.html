@@ -284,6 +284,30 @@
                 <div id="catTransContainer"></div>
                 <button class="btn btn-primary" style="margin-top:12px;" onclick="saveCatTranslations()">儲存翻譯</button>
             </div>
+            <div class="settings-card" style="grid-column: 1 / -1;">
+                <h3>品項越南語批次翻譯</h3>
+                <p style="font-size:13px;color:#666;margin-bottom:16px;">產生提示詞貼給 Gemini，再將回傳結果貼回匯入。只會產生尚未有越南語名稱的品項。</p>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+                    <button class="btn btn-outline" onclick="genViPrompt()">① 產生 Gemini 提示詞</button>
+                    <button class="btn btn-outline" onclick="showViImport()">② 匯入翻譯結果</button>
+                </div>
+                <div id="viPromptArea" style="display:none;">
+                    <p style="font-size:13px;color:#555;margin-bottom:6px;">複製以下內容，貼給 Gemini：</p>
+                    <textarea id="viPromptText" readonly rows="10"
+                        style="width:100%;font-size:13px;font-family:monospace;border:1px solid #ccc;border-radius:8px;padding:10px;resize:vertical;background:#f9f9f9;"></textarea>
+                    <button class="btn btn-outline" style="margin-top:8px;" onclick="copyViPrompt()">複製提示詞</button>
+                </div>
+                <div id="viImportArea" style="display:none;">
+                    <p style="font-size:13px;color:#555;margin-bottom:6px;">將 Gemini 回傳的 JSON 貼到下方：</p>
+                    <textarea id="viImportText" rows="10" placeholder='[{"id":1,"name":"牛肉","nameVi":"Thịt bò"},...]'
+                        style="width:100%;font-size:13px;font-family:monospace;border:1px solid #ccc;border-radius:8px;padding:10px;resize:vertical;"></textarea>
+                    <div style="display:flex;gap:8px;margin-top:8px;">
+                        <button class="btn btn-primary" onclick="importViTranslations()">匯入</button>
+                        <button class="btn btn-outline" onclick="document.getElementById('viImportArea').style.display='none'">取消</button>
+                    </div>
+                    <div id="viImportMsg" style="margin-top:8px;font-size:13px;"></div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -702,6 +726,84 @@
             showToast('✅ 翻譯已儲存');
         } catch (e) {
             alert('儲存失敗：' + e.message);
+        }
+    };
+
+    // ── VI Batch Translation ──────────────────────────────
+    window.genViPrompt = function() {
+        const items = [...inventoryData]
+            .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+            .filter(i => !i.nameVi);
+        if (!items.length) {
+            showToast('所有品項都已有越南語名稱');
+            document.getElementById('viPromptArea').style.display = 'none';
+            return;
+        }
+        const list = JSON.stringify(items.map(i => ({ id: i.id, name: i.name })), null, 2);
+        const prompt =
+`請將以下餐廳食材／物品名稱翻譯成越南文。
+直接回傳 JSON 陣列，不要加任何說明或 markdown：
+
+${list}
+
+回傳格式範例：
+[
+  {"id": 1, "name": "牛肉", "nameVi": "Thịt bò"},
+  {"id": 2, "name": "雞胸肉", "nameVi": "Thịt ức gà"}
+]`;
+        document.getElementById('viPromptText').value = prompt;
+        document.getElementById('viPromptArea').style.display = 'block';
+        document.getElementById('viImportArea').style.display = 'none';
+    };
+
+    window.copyViPrompt = function() {
+        const el = document.getElementById('viPromptText');
+        el.select();
+        navigator.clipboard?.writeText(el.value).then(() => showToast('✅ 已複製'))
+            .catch(() => { document.execCommand('copy'); showToast('✅ 已複製'); });
+    };
+
+    window.showViImport = function() {
+        document.getElementById('viImportArea').style.display = 'block';
+        document.getElementById('viPromptArea').style.display = 'none';
+        document.getElementById('viImportMsg').textContent = '';
+        document.getElementById('viImportText').value = '';
+    };
+
+    window.importViTranslations = async function() {
+        const raw = document.getElementById('viImportText').value.trim();
+        const msgEl = document.getElementById('viImportMsg');
+        let parsed;
+        try {
+            parsed = JSON.parse(raw);
+            if (!Array.isArray(parsed)) throw new Error('格式錯誤');
+        } catch {
+            msgEl.style.color = '#c62828';
+            msgEl.textContent = '⚠️ JSON 格式錯誤，請確認 Gemini 回傳的內容完整。';
+            return;
+        }
+        const updates = parsed.filter(r => r.id && r.nameVi?.trim());
+        if (!updates.length) {
+            msgEl.style.color = '#c62828';
+            msgEl.textContent = '⚠️ 找不到有效的翻譯資料（需要 id 和 nameVi 欄位）。';
+            return;
+        }
+        if (!confirm(`確定匯入 ${updates.length} 筆越南語翻譯？`)) return;
+        try {
+            await runItemTransaction(items => {
+                let count = 0;
+                updates.forEach(r => {
+                    const item = items.find(i => String(i.id) === String(r.id));
+                    if (item) { item.nameVi = r.nameVi.trim(); count++; }
+                });
+                if (!count) return false;
+            });
+            msgEl.style.color = '#2e7d32';
+            msgEl.textContent = `✅ 已匯入 ${updates.length} 筆翻譯。`;
+            document.getElementById('viImportText').value = '';
+        } catch (e) {
+            msgEl.style.color = '#c62828';
+            msgEl.textContent = '⚠️ 儲存失敗：' + e.message;
         }
     };
 
