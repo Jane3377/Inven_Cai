@@ -140,16 +140,8 @@
         .hidden { display: none !important; }
         .loading-text { text-align: center; padding: 34px; font-size: 18px; color: #666; }
         body.is-offline button[data-write="true"], body.is-offline input, body.is-offline select, body.is-offline textarea { opacity: 0.55; cursor: not-allowed; }
-        .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.38); display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
-        .modal-backdrop.open { display: flex; }
-        .modal { width: min(720px, 100%); max-height: 92vh; overflow: auto; background: #fff; border-radius: 20px; box-shadow: 0 24px 80px rgba(0,0,0,0.22); padding: 18px; }
-        .modal-header { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; border-bottom: 1px solid var(--line-color); padding-bottom: 12px; margin-bottom: 14px; }
-        .modal-title { margin: 0; font-size: 22px; color: var(--primary-dark); }
-        .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-        .form-grid .full { grid-column: 1 / -1; }
-        .field-label { display: block; color: #506059; font-size: 13px; font-weight: 800; margin-bottom: 5px; }
+
         .help { color: #7d8a83; font-size: 12px; line-height: 1.5; margin-top: 5px; }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
         .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
         .chip { border-radius: 999px; background: #eef5ef; border: 1px solid #d6e5da; padding: 7px 10px; display: inline-flex; gap: 8px; align-items: center; font-size: 13px; }
         .toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%) translateY(20px); background: #23352b; color: #fff; border-radius: 999px; padding: 10px 16px; opacity: 0; pointer-events: none; transition: all .22s ease; z-index: 200; box-shadow: var(--shadow); }
@@ -170,11 +162,9 @@
         @media (max-width: 560px) {
             .app-shell { padding: 10px; }
             .panel, .hero { border-radius: 16px; padding: 14px; }
-            .form-grid { grid-template-columns: 1fr; }
             .location-grid { grid-template-columns: 1fr; }
             .log-line { grid-template-columns: 1fr; gap: 2px; }
             .btn, .nav-tab { padding: 10px 13px; }
-            .modal { padding: 14px; }
         }
         @media (display-mode: standalone) { .subtitle .pwa-hint { display: none; } }
 
@@ -320,59 +310,6 @@
 
 </div>
 
-<div class="modal-backdrop" id="actionModal">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="actionModalTitle">
-        <div class="modal-header">
-            <div>
-                <h2 class="modal-title" id="actionModalTitle">庫存操作</h2>
-                <div class="help" id="actionModalSub"></div>
-            </div>
-            <button class="btn btn-ghost btn-small" type="button" onclick="closeModal('actionModal')">關閉</button>
-        </div>
-        <form onsubmit="submitStockAction(event)">
-            <div class="form-grid">
-                <label class="full">
-                    <span class="field-label">品項</span>
-                    <select id="actionItemId" required onchange="refreshActionModalByItem()"></select>
-                </label>
-                <label>
-                    <span class="field-label">操作類型</span>
-                    <select id="actionType" required onchange="refreshActionFields()">
-                        <option value="receive">進貨入庫</option>
-                        <option value="move">移倉 / 備貨 / 退回</option>
-                        <option value="consume">現場消耗</option>
-                        <option value="waste">報廢 / 盤點扣減</option>
-                    </select>
-                </label>
-                <label>
-                    <span class="field-label">數量</span>
-                    <div style="display:grid;grid-template-columns:1fr 110px;gap:8px;">
-                        <input id="actionQty" class="field" type="number" min="0" step="any" inputmode="decimal" placeholder="例如 0.5 或 400" required>
-                        <select id="actionUnit"></select>
-                    </div>
-                    <div class="help" id="unitHelp"></div>
-                </label>
-                <label id="fromWrap">
-                    <span class="field-label">來源庫位</span>
-                    <select id="fromLocation"></select>
-                </label>
-                <label id="toWrap">
-                    <span class="field-label">目的庫位</span>
-                    <select id="toLocation"></select>
-                </label>
-                <label class="full">
-                    <span class="field-label">備註，選填</span>
-                    <input id="actionNote" class="field" type="text" placeholder="例如：備貨剩餘退回、盤點修正、叫貨到貨">
-                </label>
-            </div>
-            <div id="modalStockPreview" class="location-grid" style="margin-top:14px;"></div>
-            <div class="modal-actions">
-                <button class="btn btn-ghost" type="button" onclick="closeModal('actionModal')">取消</button>
-                <button class="btn btn-primary" data-write="true" type="submit">確認寫入</button>
-            </div>
-        </form>
-    </div>
-</div>
 
 <main id="countView" class="panel hidden">
     <!-- PIN gate -->
@@ -1011,119 +948,11 @@ const firebaseConfig = {
     };
 
 
-    function activeItemOptions(selectedId) {
-        return inventoryData.filter(i => i.active !== false).map(item => `<option value="${item.id}" ${String(item.id) === String(selectedId) ? "selected" : ""}>${escapeHtml(item.category)}｜${escapeHtml(item.name)}</option>`).join("");
-    }
-
-    window.openActionModal = function(itemId = null, actionType = "move") {
-        const activeItems = inventoryData.filter(i => i.active !== false);
-        if (!activeItems.length) return alert("目前沒有可操作的品項。");
-        const selectedId = itemId ?? activeItems[0].id;
-        document.getElementById("actionItemId").innerHTML = activeItemOptions(selectedId);
-        document.getElementById("actionType").value = actionType || "move";
-        document.getElementById("actionQty").value = "";
-        document.getElementById("actionNote").value = "";
-        refreshActionModalByItem();
-        openModal("actionModal");
-    };
-
-    window.refreshActionModalByItem = function() {
-        const item = getSelectedActionItem();
-        if (!item) return;
-        const unitOptions = [item.displayUnit];
-        if (item.allowBaseInput && item.baseUnit !== item.displayUnit) unitOptions.push(item.baseUnit);
-        document.getElementById("actionUnit").innerHTML = unitOptions.map(unit => `<option value="${escapeHtml(unit)}">${escapeHtml(unit)}</option>`).join("");
-        document.getElementById("actionModalTitle").textContent = `庫存操作｜${item.name}`;
-        document.getElementById("actionModalSub").textContent = `${item.basePerDisplay} ${item.baseUnit} = 1 ${item.displayUnit}；可輸入小數。`;
-        document.getElementById("unitHelp").textContent = item.baseUnit !== item.displayUnit ? `例：輸入 0.5 ${item.displayUnit} = ${roundQty(item.basePerDisplay * 0.5)} ${item.baseUnit}；也可直接輸入 ${item.baseUnit}。` : `此品項以 ${item.baseUnit} 為單位。`;
-        refreshLocationSelects(item);
-        refreshActionFields();
-        renderModalStockPreview(item);
-    };
-
-    function getSelectedActionItem() {
-        const id = document.getElementById("actionItemId").value;
-        return inventoryData.find(i => String(i.id) === String(id));
-    }
-
-    function refreshLocationSelects(item) {
-        const allowed = item.allowedLocations && item.allowedLocations.length ? item.allowedLocations : Object.keys(LOCATION_DEFS);
-        const options = allowed.map(key => `<option value="${key}">${LOCATION_DEFS[key].name}（目前 ${formatQty(item, normalizeNumber(item.locations?.[key], 0), { compact: true })}）</option>`).join("");
-        const from = document.getElementById("fromLocation");
-        const to = document.getElementById("toLocation");
-        from.innerHTML = options;
-        to.innerHTML = options;
-        from.value = item.defaultIssueLocation || allowed[0];
-        to.value = item.defaultReceiveLocation || allowed[0];
-    }
-
-    window.refreshActionFields = function() {
-        const item = getSelectedActionItem();
-        if (!item) return;
-        const type = document.getElementById("actionType").value;
-        const fromWrap = document.getElementById("fromWrap");
-        const toWrap = document.getElementById("toWrap");
-        fromWrap.classList.toggle("hidden", type === "receive");
-        toWrap.classList.toggle("hidden", type === "consume" || type === "waste");
-        if (type === "receive") document.getElementById("toLocation").value = item.defaultReceiveLocation;
-        if (type === "consume" || type === "waste") document.getElementById("fromLocation").value = item.defaultIssueLocation;
-        if (type === "move") {
-            document.getElementById("fromLocation").value = item.defaultReceiveLocation;
-            document.getElementById("toLocation").value = item.defaultIssueLocation;
-        }
-    };
-
-    function renderModalStockPreview(item) {
-        const keys = [...WAREHOUSE_KEYS, ...PREP_KEYS, ...STATION_KEYS].filter(key => item.allowedLocations.includes(key) || normalizeNumber(item.locations?.[key], 0) > 0);
-        document.getElementById("modalStockPreview").innerHTML = keys.map(key => `<div class="location-tile"><div class="loc">${LOCATION_DEFS[key].name}</div><div class="qty">${formatQty(item, normalizeNumber(item.locations?.[key], 0))}</div></div>`).join("");
-    }
-
-    window.submitStockAction = function(event) {
-        event.preventDefault();
-        if (!guardOnline()) return;
-        const itemId = document.getElementById("actionItemId").value;
-        const actionType = document.getElementById("actionType").value;
-        const qtyVal = document.getElementById("actionQty").value;
-        const unit = document.getElementById("actionUnit").value;
-        const fromLocation = document.getElementById("fromLocation").value;
-        const toLocation = document.getElementById("toLocation").value;
-        const note = document.getElementById("actionNote").value.trim();
-        runStockTransaction((items, txLogs) => {
-            const item = items.find(i => String(i.id) === String(itemId));
-            if (!item) { alert("找不到此品項，請重新整理。"); return false; }
-            const baseQty = roundQty(qtyToBase(item, qtyVal, unit));
-            if (!Number.isFinite(baseQty) || baseQty <= 0) { alert("請輸入大於 0 的數量。"); return false; }
-            const qtyText = formatQty(item, baseQty);
-            const noteText = note ? `｜${note}` : "";
-            if (actionType === "receive") {
-                item.locations[toLocation] = roundQty(normalizeNumber(item.locations[toLocation], 0) + baseQty);
-                pushLog(txLogs, `📦 進貨入庫：【${item.name}】${LOCATION_DEFS[toLocation].name} +${qtyText}${noteText}`, { itemId: item.id, actionType, baseQty, toLocation });
-            } else if (actionType === "move") {
-                if (fromLocation === toLocation) { alert("來源與目的庫位不能相同。"); return false; }
-                if (normalizeNumber(item.locations[fromLocation], 0) < baseQty) { alert(`${LOCATION_DEFS[fromLocation].name} 存量不足。`); return false; }
-                item.locations[fromLocation] = roundQty(item.locations[fromLocation] - baseQty);
-                item.locations[toLocation] = roundQty(normalizeNumber(item.locations[toLocation], 0) + baseQty);
-                pushLog(txLogs, `🔄 移倉：【${item.name}】${LOCATION_DEFS[fromLocation].name} → ${LOCATION_DEFS[toLocation].name}，${qtyText}${noteText}`, { itemId: item.id, actionType, baseQty, fromLocation, toLocation });
-            } else if (actionType === "consume") {
-                if (normalizeNumber(item.locations[fromLocation], 0) < baseQty) { alert(`${LOCATION_DEFS[fromLocation].name} 存量不足。`); return false; }
-                item.locations[fromLocation] = roundQty(item.locations[fromLocation] - baseQty);
-                pushLog(txLogs, `📤 現場消耗：【${item.name}】${LOCATION_DEFS[fromLocation].name} -${qtyText}${noteText}`, { itemId: item.id, actionType, baseQty, fromLocation });
-            } else if (actionType === "waste") {
-                if (normalizeNumber(item.locations[fromLocation], 0) < baseQty) { alert(`${LOCATION_DEFS[fromLocation].name} 存量不足。`); return false; }
-                item.locations[fromLocation] = roundQty(item.locations[fromLocation] - baseQty);
-                pushLog(txLogs, `🗑️ 報廢 / 盤點扣減：【${item.name}】${LOCATION_DEFS[fromLocation].name} -${qtyText}${noteText}`, { itemId: item.id, actionType, baseQty, fromLocation });
-            }
-        }).then(() => closeModal("actionModal"));
-    };
-
     window.clearLogs = function() {
         if (!guardOnline()) return;
         if (!confirm("確定要清除所有紀錄嗎？所有連線設備都會同步清除。")) return;
         runStockTransaction((items, txLogs) => { txLogs.length = 0; });
     };
-
-    function openModal(id) { document.getElementById(id).classList.add("open"); }
-    window.closeModal = function(id) { document.getElementById(id).classList.remove("open"); };
 
     window.addEventListener("beforeinstallprompt", (event) => {
         event.preventDefault();
