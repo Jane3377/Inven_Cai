@@ -285,6 +285,36 @@
                 <button class="btn btn-primary" style="margin-top:12px;" onclick="saveCatTranslations()">儲存翻譯</button>
             </div>
             <div class="settings-card" style="grid-column: 1 / -1;">
+                <h3>品項批次匯入</h3>
+                <p style="font-size:13px;color:#666;margin-bottom:4px;">將品項清單貼為 JSON 格式後預覽，確認後一次匯入。同名品項會自動跳過。</p>
+                <details style="margin-bottom:14px;">
+                    <summary style="font-size:12px;color:#888;cursor:pointer;">JSON 格式說明</summary>
+                    <pre style="font-size:11px;background:#f5f5f5;padding:10px;border-radius:6px;margin-top:6px;overflow-x:auto;line-height:1.6;">[
+  {
+    "name": "牛肉",          // 必填
+    "category": "肉類",      // 必填
+    "displayUnit": "包",     // 必填
+    "baseUnit": "g",         // 選填，預設同 displayUnit
+    "basePerDisplay": 500,   // 選填，預設 1
+    "storageType": "冷凍",   // 選填：冷凍／冷藏／常溫，預設冷凍
+    "thresholdDisplay": 2,   // 選填，安全線，預設 0
+    "enableThaw": false,     // 選填，預設 false
+    "enableReturn": false,   // 選填，預設 false
+    "notes": "備註",         // 選填
+    "nameVi": "Thịt bò"     // 選填，越南語名稱
+  }
+]</pre>
+                </details>
+                <textarea id="batchImportText" rows="8" placeholder='貼上 JSON 內容…'
+                    style="width:100%;font-size:13px;font-family:monospace;border:1px solid #ccc;border-radius:8px;padding:10px;resize:vertical;margin-bottom:8px;"></textarea>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="btn btn-outline" onclick="previewBatchImport()">預覽</button>
+                    <button class="btn btn-primary" id="confirmImportBtn" style="display:none;" onclick="confirmBatchImport()">確認匯入</button>
+                    <button class="btn btn-outline" id="cancelImportBtn" style="display:none;" onclick="cancelBatchImport()">取消</button>
+                </div>
+                <div id="batchImportPreview" style="margin-top:12px;"></div>
+            </div>
+            <div class="settings-card" style="grid-column: 1 / -1;">
                 <h3>品項越南語批次翻譯</h3>
                 <p style="font-size:13px;color:#666;margin-bottom:16px;">產生提示詞貼給 Gemini，再將回傳結果貼回匯入。只會產生尚未有越南語名稱的品項。</p>
                 <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
@@ -805,6 +835,113 @@ ${list}
             msgEl.style.color = '#c62828';
             msgEl.textContent = '⚠️ 儲存失敗：' + e.message;
         }
+    };
+
+    // ── Batch Import ──────────────────────────────────────
+    let batchImportReady = [];
+
+    window.previewBatchImport = function() {
+        const raw = document.getElementById('batchImportText').value.trim();
+        const previewEl = document.getElementById('batchImportPreview');
+        const confirmBtn = document.getElementById('confirmImportBtn');
+        const cancelBtn = document.getElementById('cancelImportBtn');
+        batchImportReady = [];
+
+        let parsed;
+        try {
+            parsed = JSON.parse(raw);
+            if (!Array.isArray(parsed)) throw new Error();
+        } catch {
+            previewEl.innerHTML = '<p style="color:#c62828;font-size:13px;">⚠️ JSON 格式錯誤，請確認內容。</p>';
+            confirmBtn.style.display = 'none'; cancelBtn.style.display = 'none';
+            return;
+        }
+
+        const existingNames = new Set(inventoryData.map(i => i.name));
+        const rows = parsed.map(r => {
+            if (!r.name || !r.category || !r.displayUnit) {
+                return { ...r, _status: 'error', _msg: '缺少必填欄位' };
+            }
+            if (existingNames.has(r.name)) {
+                return { ...r, _status: 'skip', _msg: '同名已存在' };
+            }
+            batchImportReady.push(r);
+            return { ...r, _status: 'ok' };
+        });
+
+        const toImport = rows.filter(r => r._status === 'ok').length;
+        const colors = { ok: '#2e7d32', skip: '#999', error: '#c62828' };
+        const labels = { ok: '✅ 匯入', skip: '⏭ 跳過', error: '⚠️ 錯誤' };
+
+        previewEl.innerHTML = `
+            <p style="font-size:13px;color:#444;margin-bottom:8px;">共 ${parsed.length} 筆，將匯入 <strong>${toImport}</strong> 筆，跳過 ${rows.filter(r=>r._status==='skip').length} 筆。</p>
+            <div style="overflow-x:auto;">
+            <table style="width:100%;font-size:13px;border-collapse:collapse;">
+                <thead><tr style="background:#f5f5f5;">
+                    <th style="padding:6px 10px;text-align:left;">品項名稱</th>
+                    <th style="padding:6px 10px;text-align:left;">分類</th>
+                    <th style="padding:6px 10px;text-align:left;">單位</th>
+                    <th style="padding:6px 10px;text-align:left;">狀態</th>
+                </tr></thead>
+                <tbody>${rows.map(r => `
+                    <tr style="border-bottom:1px solid #f0f0f0;">
+                        <td style="padding:6px 10px;">${esc(r.name || '—')}</td>
+                        <td style="padding:6px 10px;">${esc(r.category || '—')}</td>
+                        <td style="padding:6px 10px;">${esc(r.displayUnit || '—')}</td>
+                        <td style="padding:6px 10px;color:${colors[r._status]};font-weight:700;">${labels[r._status]}${r._msg ? ' ' + r._msg : ''}</td>
+                    </tr>`).join('')}
+                </tbody>
+            </table></div>`;
+
+        if (toImport > 0) {
+            confirmBtn.style.display = ''; cancelBtn.style.display = '';
+        } else {
+            confirmBtn.style.display = 'none'; cancelBtn.style.display = 'none';
+        }
+    };
+
+    window.confirmBatchImport = async function() {
+        if (!batchImportReady.length) return;
+        if (!confirm(`確定匯入 ${batchImportReady.length} 筆品項？`)) return;
+        try {
+            await runItemTransaction(items => {
+                let nextSort = items.length ? Math.max(...items.map(i => i.sortOrder || 0)) + 1 : 1;
+                batchImportReady.forEach(r => {
+                    const storageType = ['冷凍','冷藏','常溫'].includes(r.storageType) ? r.storageType : '冷凍';
+                    const patch = {
+                        id: Date.now() + Math.floor(Math.random() * 10000),
+                        name: r.name,
+                        ...(r.nameVi ? { nameVi: r.nameVi } : {}),
+                        category: r.category,
+                        displayUnit: r.displayUnit,
+                        baseUnit: r.baseUnit || r.displayUnit,
+                        basePerDisplay: nn(r.basePerDisplay, 1) || 1,
+                        storageType,
+                        thresholdDisplay: nn(r.thresholdDisplay, 0),
+                        enableThaw: r.enableThaw === true,
+                        enableReturn: r.enableReturn === true,
+                        primaryStation: r.primaryStation || 'pizzaStation',
+                        notes: r.notes || '',
+                        sortOrder: r.sortOrder ?? nextSort++,
+                        active: true,
+                        locations: {},
+                    };
+                    items.push(normalizeItem(patch, items.length));
+                });
+            });
+            showToast(`✅ 已匯入 ${batchImportReady.length} 筆品項`);
+            cancelBatchImport();
+        } catch (e) {
+            alert('匯入失敗：' + e.message);
+        }
+    };
+
+    window.cancelBatchImport = function() {
+        batchImportReady = [];
+        document.getElementById('batchImportText').value = '';
+        document.getElementById('batchImportPreview').innerHTML = '';
+        document.getElementById('confirmImportBtn').style.display = 'none';
+        document.getElementById('cancelImportBtn').style.display = 'none';
     };
 
     // ── Item Editor ───────────────────────────────────────
