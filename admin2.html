@@ -628,6 +628,7 @@
                         <div class="action-cell">
                             <button class="btn btn-primary btn-sm" onclick="openItemEditor(${esc(item.id)})">編輯</button>
                             <button class="btn btn-outline btn-sm" onclick="toggleActive(${esc(item.id)})">${item.active === false ? '啟用' : '停用'}</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteItem(${esc(item.id)})">刪除</button>
                         </div>
                     </td>
                 </tr>`).join('')
@@ -881,6 +882,25 @@
             if (!it) return false;
             it.active = next;
             pushLog(txLogs, `⚙️ 後台：${next ? '啟用' : '停用'}品項「${it.name}」`);
+        });
+    };
+
+    window.deleteItem = function(itemId) {
+        const item = inventoryData.find(i => String(i.id) === String(itemId));
+        if (!item) return;
+        const stock = sumLocations(item);
+        const stockWarn = stock > 0
+            ? `\n\n⚠️ 此品項仍有庫存 ${parseFloat((stock / (item.basePerDisplay || 1)).toFixed(3))} ${item.displayUnit}，刪除後資料無法復原。`
+            : '';
+        if (!confirm(`確定永久刪除「${item.name}」？${stockWarn}\n此操作無法復原。`)) return;
+        runItemTransaction((items, txLogs) => {
+            const idx = items.findIndex(i => String(i.id) === String(itemId));
+            if (idx === -1) return false;
+            const name = items[idx].name;
+            items.splice(idx, 1);
+            items.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+            items.forEach((it, i) => { it.sortOrder = i + 1; });
+            pushLog(txLogs, `🗑️ 後台：永久刪除品項「${name}」`);
         });
     };
 
