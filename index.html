@@ -297,16 +297,15 @@
                 <thead>
                     <tr>
                         <th style="width:6%;">類別</th>
-                        <th style="text-align:left;width:15%;">食材 / 物品</th>
-                        <th style="width:12%;">大倉</th>
+                        <th style="text-align:left;width:16%;">食材 / 物品</th>
+                        <th style="width:14%;">大倉</th>
                         <th style="width:12%;">備貨</th>
-                        <th style="width:9%;">使用區</th>
-                        <th style="width:9%;">提醒</th>
-                        <th style="width:12%;">數量</th>
-                        <th style="width:25%;">動作</th>
+                        <th style="width:10%;">提醒</th>
+                        <th style="width:13%;">數量</th>
+                        <th style="width:29%;">動作</th>
                     </tr>
                 </thead>
-                <tbody id="inventoryBody"><tr><td colspan="8" class="loading-text">🔄 正在載入資料庫，請稍候...</td></tr></tbody>
+                <tbody id="inventoryBody"><tr><td colspan="7" class="loading-text">🔄 正在載入資料庫，請稍候...</td></tr></tbody>
             </table>
         </div>
         <div id="mobileCards" class="mobile-cards"></div>
@@ -841,7 +840,7 @@ const firebaseConfig = {
         const infoLines = [
             `入庫 → ${receiveLoc}`,
             ...(item.enableThaw ? [`備料 ${receiveLoc} → ${issueLoc}`] : []),
-            `消耗 ${consumeFrom} → ${stationName}`,
+            `消耗 ${consumeFrom} → 出庫`,
             ...(item.enableReturn ? [`回放 ${consumeFrom} → ${retLoc}`] : []),
         ];
         return `
@@ -849,8 +848,7 @@ const firebaseConfig = {
                 <td><span class="badge badge-muted">${escapeHtml(item.category)}</span></td>
                 <td class="name-cell"><strong>${escapeHtml(item.name)}</strong><div class="help">${escapeHtml(item.basePerDisplay)} ${escapeHtml(item.baseUnit)} = 1 ${escapeHtml(item.displayUnit)}</div></td>
                 <td>${renderLocationStack(item, WAREHOUSE_KEYS)}</td>
-                <td>${renderLocationStack(item, PREP_KEYS)}</td>
-                <td>${renderLocationStack(item, STATION_KEYS)}</td>
+                <td>${renderSingleLocationCell(item, item.defaultConsumeLocation)}</td>
                 <td>${item.active === false
                     ? '<span class="badge badge-off">停用</span>'
                     : isLow
@@ -885,10 +883,19 @@ const firebaseConfig = {
         return `<div class="stock-stack">${filtered.map(key => `<div class="stock-line"><span>${LOCATION_DEFS[key].short}</span><strong>${formatQty(item, normalizeNumber(item.locations?.[key], 0), { compact: true })}</strong></div>`).join("")}</div>`;
     }
 
+    function renderSingleLocationCell(item, key) {
+        const def = LOCATION_DEFS[key];
+        if (!def) return '<div class="stock-stack" style="color:#ccc;font-size:12px;">—</div>';
+        return `<div class="stock-stack"><div class="stock-line"><span>${def.short}</span><strong>${formatQty(item, normalizeNumber(item.locations?.[key], 0), { compact: true })}</strong></div></div>`;
+    }
+
     function renderMobileCard(item) {
         const warehouseBase = sumLocations(item, STOCK_KEYS);
         const isLow = item.active !== false && warehouseBase <= item.thresholdBase;
-        const locKeys = [...WAREHOUSE_KEYS, ...PREP_KEYS, ...STATION_KEYS].filter(key => item.allowedLocations.includes(key) || normalizeNumber(item.locations?.[key], 0) > 0);
+        const prepKeys = [item.defaultConsumeLocation, ...(item.enableThaw ? [item.defaultIssueLocation] : [])]
+            .filter((k, i, arr) => k && arr.indexOf(k) === i);
+        const locKeys = [...WAREHOUSE_KEYS, ...prepKeys].filter((key, i, arr) =>
+            arr.indexOf(key) === i && (item.allowedLocations.includes(key) || normalizeNumber(item.locations?.[key], 0) > 0) && LOCATION_DEFS[key]);
         const dis = item.active === false ? "disabled" : "";
         return `
             <article class="item-card ${item.active === false ? "inactive-row" : ""}">
