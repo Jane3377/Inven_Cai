@@ -207,6 +207,15 @@
                     <button class="btn btn-outline" onclick="clearCountPin()">清除</button>
                 </div>
             </div>
+            <div class="settings-card">
+                <h3>操作記錄管理</h3>
+                <p style="font-size:13px;color:#666;margin-bottom:12px;">清理 6 個月前的操作記錄以釋放空間。清理後無法復原。</p>
+                <div id="logStatsDisplay" style="font-size:13px;color:#555;margin-bottom:12px;">（點擊查詢統計）</div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="btn btn-outline" onclick="queryLogStats()">查詢記錄筆數</button>
+                    <button class="btn btn-outline" style="color:#c62828;border-color:#c62828;" onclick="cleanupOldLogs()">清理 6 個月前記錄</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -357,7 +366,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { doc, setDoc, onSnapshot, runTransaction, initializeFirestore, persistentLocalCache, persistentMultipleTabManager }
+    import { doc, collection, setDoc, onSnapshot, runTransaction, getDocs, query, where, writeBatch, initializeFirestore, persistentLocalCache, persistentMultipleTabManager }
         from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -377,6 +386,7 @@
 
     const mainRef     = doc(db, "inventory", "mainStore");
     const settingsRef = doc(db, "inventory", "settings");
+    const logsRef     = collection(db, "inventory", "mainStore", "logs");
 
     const LOCATION_DEFS = {
         warehouseFrozen:  { name: "大倉冷凍", short: "冷凍", group: "大倉" },
@@ -457,12 +467,13 @@
         try {
             await runTransaction(db, async tx => {
                 const snap = await tx.get(mainRef);
-                const data = snap.exists() ? snap.data() : { items: [], logs: [] };
+                const data = snap.exists() ? snap.data() : { items: [] };
                 const items = (data.items || []).map(normalizeItem);
-                const txLogs = data.logs || [];
-                if (mutate(items, txLogs) === false) return;
-                if (txLogs.length > 100) txLogs.splice(100);
-                tx.set(mainRef, { ...data, items, logs: txLogs, lastUpdated: new Date().toISOString() });
+                const pendingLogs = [];
+                if (mutate(items, pendingLogs) === false) return;
+                const { logs: _old, ...restData } = data;
+                tx.set(mainRef, { ...restData, items, lastUpdated: new Date().toISOString() });
+                pendingLogs.forEach(logData => tx.set(doc(logsRef), logData));
             });
             showToast("✅ 已儲存");
         } catch (e) {
@@ -470,8 +481,13 @@
         }
     }
 
-    function pushLog(txLogs, text) {
-        txLogs.unshift({ time: new Date().toLocaleString('zh-TW', { hour12: false }), text });
+    function pushLog(pendingLogs, text) {
+        const now = new Date();
+        pendingLogs.push({
+            ts: now.getTime(),
+            time: now.toLocaleString('zh-TW', { hour12: false }),
+            text
+        });
     }
 
     // ── PIN ──────────────────────────────────────────────
@@ -753,6 +769,32 @@
         setDoc(settingsRef, { countPin: "" }, { merge: true })
             .then(() => { countPin = ""; showToast('✅ 盤點 PIN 已清除'); })
             .catch(e => alert('儲存失敗：' + e.message));
+    };
+
+    window.queryLogStats = async function() {
+        const el = document.getElementById('logStatsDisplay');
+        el.textContent = '查詢中…';
+        const snap = await getDocs(logsRef);
+        const sixMonthsAgo = Date.now() - 180 * 24 * 3600 * 1000;
+        const old = snap.docs.filter(d => (d.data().ts || 0) < sixMonthsAgo).length;
+        el.textContent = `共 ${snap.size} 筆記錄，其中 ${old} 筆超過 6 個月。`;
+    };
+
+    window.cleanupOldLogs = async function() {
+        const sixMonthsAgo = Date.now() - 180 * 24 * 3600 * 1000;
+        const snap = await getDocs(query(logsRef, where("ts", "<", sixMonthsAgo)));
+        if (!snap.size) { showToast("沒有需要清理的記錄"); return; }
+        if (!confirm(`確認刪除 ${snap.size} 筆 6 個月前的記錄？此操作無法復原。`)) return;
+        const BATCH_SIZE = 500;
+        let batch = writeBatch(db);
+        let count = 0;
+        for (const d of snap.docs) {
+            batch.delete(d.ref);
+            if (++count % BATCH_SIZE === 0) { await batch.commit(); batch = writeBatch(db); }
+        }
+        if (count % BATCH_SIZE !== 0) await batch.commit();
+        showToast(`✅ 已清理 ${snap.size} 筆舊記錄`);
+        document.getElementById('logStatsDisplay').textContent = '（已更新，請重新查詢統計）';
     };
 
     // ── Toast ─────────────────────────────────────────────

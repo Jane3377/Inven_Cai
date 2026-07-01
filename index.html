@@ -356,7 +356,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { doc, setDoc, onSnapshot, runTransaction, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { doc, collection, setDoc, onSnapshot, runTransaction, getDocs, query, where, orderBy, limit as fsLimit, writeBatch, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
    
 // Your web app's Firebase configuration
@@ -374,7 +374,8 @@ const firebaseConfig = {
         experimentalAutoDetectLongPolling: true,
         localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
     });
-    const docRef = doc(db, "inventory", "mainStore");
+    const docRef  = doc(db, "inventory", "mainStore");
+    const logsRef = collection(db, "inventory", "mainStore", "logs");
 
     const SCHEMA_VERSION = 2;
     const WAREHOUSE_KEYS = ["warehouseFrozen", "warehouseChilled", "warehouseRoom"];
@@ -391,7 +392,8 @@ const firebaseConfig = {
     };
 
     let inventoryData = [];
-    let logs = [];
+    let globalLogs = [];
+    const itemLogsCache = {};
     let settings = { categories: [], locations: Object.values(LOCATION_DEFS), countPin: "" };
     let currentCategoryFilter = "全部";
     let isOffline = false;
@@ -553,7 +555,6 @@ const firebaseConfig = {
             const data = docSnap.data();
             settings = { categories: [], locations: Object.values(LOCATION_DEFS), ...(data.settings || {}) };
             inventoryData = normalizeItems(data.items || []);
-            logs = Array.isArray(data.logs) ? data.logs : [];
         } else {
             inventoryData = [];
             settings = { categories: [], locations: Object.values(LOCATION_DEFS) };
@@ -568,12 +569,26 @@ const firebaseConfig = {
         }
     });
 
+    onSnapshot(query(logsRef, orderBy("ts", "desc"), fsLimit(80)), async (snap) => {
+        globalLogs = snap.docs.map(d => d.data());
+        renderLogs();
+        for (const [itemId, limit] of Object.entries(logExpandState)) {
+            if (!limit) continue;
+            delete itemLogsCache[itemId];
+            await fetchItemLogs(itemId);
+            const content = renderItemLogContent(itemId, limit);
+            const subrowContent = document.getElementById(`log-subrow-content-${itemId}`);
+            if (subrowContent) subrowContent.innerHTML = content;
+            const cardLog = document.getElementById(`card-log-${itemId}`);
+            if (cardLog && !cardLog.classList.contains("hidden")) cardLog.innerHTML = content;
+        }
+    });
+
     function saveWholeDocument() {
         const items = normalizeItems(inventoryData);
         setDoc(docRef, {
             schemaVersion: SCHEMA_VERSION,
             items,
-            logs,
             settings: { ...settings, categories: getAllCategories().filter(c => c !== "全部") },
             lastUpdated: new Date().toISOString()
         }).catch(error => alert("資料儲存遇到問題，請稍後再試：" + error.message));
@@ -584,20 +599,19 @@ const firebaseConfig = {
         try {
             await runTransaction(db, async (tx) => {
                 const snap = await tx.get(docRef);
-                const data = snap.exists() ? snap.data() : { items: [], logs: [], settings: {} };
+                const data = snap.exists() ? snap.data() : { items: [], settings: {} };
                 const items = normalizeItems(data.items || []);
-                let txLogs = Array.isArray(data.logs) ? [...data.logs] : [];
+                const pendingLogs = [];
                 const txSettings = { categories: [], locations: Object.values(LOCATION_DEFS), ...(data.settings || {}) };
-                const result = mutate(items, txLogs, txSettings);
+                const result = mutate(items, pendingLogs, txSettings);
                 if (result === false) return;
-                if (txLogs.length > 500) txLogs = txLogs.slice(0, 500);
                 tx.set(docRef, {
                     schemaVersion: SCHEMA_VERSION,
                     items: normalizeItems(items),
-                    logs: txLogs,
                     settings: txSettings,
                     lastUpdated: new Date().toISOString()
                 });
+                pendingLogs.forEach(logData => tx.set(doc(logsRef), logData));
             });
             if (!options.silent) showToast("已寫入並同步庫存");
         } catch (error) {
@@ -605,9 +619,9 @@ const firebaseConfig = {
         }
     }
 
-    function pushLog(txLogs, text, meta = {}) {
+    function pushLog(pendingLogs, text, meta = {}) {
         const now = new Date();
-        txLogs.unshift({
+        pendingLogs.push({
             id: `${now.getTime()}-${Math.random().toString(36).slice(2, 8)}`,
             ts: now.getTime(),
             time: now.toLocaleString("zh-TW", { hour12: false }),
@@ -675,24 +689,27 @@ const firebaseConfig = {
             const panel = document.getElementById(`card-panel-${itemId}`);
             if (panel) { panel.innerHTML = renderCardPanel(item, type); panel.classList.remove("hidden"); }
         });
-        Object.entries(logExpandState).forEach(([itemId, limit]) => {
-            if (!limit) return;
-            const content = renderItemLogContent(itemId, limit);
-            const subrow = document.getElementById(`log-subrow-${itemId}`);
-            if (subrow) {
-                document.getElementById(`log-subrow-content-${itemId}`).innerHTML = content;
-                subrow.classList.remove("hidden");
-                const btn = document.getElementById(`log-toggle-table-${itemId}`);
-                if (btn) { btn.textContent = "收合"; btn.classList.add("open"); }
+        (async () => {
+            for (const [itemId, limit] of Object.entries(logExpandState)) {
+                if (!limit) continue;
+                if (!itemLogsCache[itemId]) await fetchItemLogs(itemId);
+                const content = renderItemLogContent(itemId, limit);
+                const subrow = document.getElementById(`log-subrow-${itemId}`);
+                if (subrow) {
+                    document.getElementById(`log-subrow-content-${itemId}`).innerHTML = content;
+                    subrow.classList.remove("hidden");
+                    const btn = document.getElementById(`log-toggle-table-${itemId}`);
+                    if (btn) { btn.textContent = "收合"; btn.classList.add("open"); }
+                }
+                const cardLog = document.getElementById(`card-log-${itemId}`);
+                if (cardLog) {
+                    cardLog.innerHTML = content;
+                    cardLog.classList.remove("hidden");
+                    const btn = document.getElementById(`log-toggle-card-${itemId}`);
+                    if (btn) { btn.textContent = "▲ 收合明細"; btn.classList.add("open"); }
+                }
             }
-            const cardLog = document.getElementById(`card-log-${itemId}`);
-            if (cardLog) {
-                cardLog.innerHTML = content;
-                cardLog.classList.remove("hidden");
-                const btn = document.getElementById(`log-toggle-card-${itemId}`);
-                if (btn) { btn.textContent = "▲ 收合明細"; btn.classList.add("open"); }
-            }
-        });
+        })();
         renderLogs();
     }
 
@@ -849,13 +866,16 @@ const firebaseConfig = {
         document.querySelectorAll(".info-pop").forEach(p => p.classList.add("hidden"));
     });
 
-    function renderItemLogContent(itemId, limit) {
+    async function fetchItemLogs(itemId) {
         const sevenDaysAgo = Date.now() - 7 * 24 * 3600 * 1000;
-        const all = logs.filter(l => {
-            if (String(l.itemId) !== String(itemId)) return false;
-            const t = l.ts != null ? l.ts : new Date(l.time).getTime();
-            return t >= sevenDaysAgo;
-        });
+        const snap = await getDocs(query(logsRef, where("itemId", "==", Number(itemId)), fsLimit(300)));
+        itemLogsCache[itemId] = snap.docs.map(d => d.data())
+            .sort((a, b) => (b.ts || 0) - (a.ts || 0))
+            .filter(l => l.ts == null || l.ts >= sevenDaysAgo);
+    }
+
+    function renderItemLogContent(itemId, limit) {
+        const all = itemLogsCache[itemId] || [];
         if (!all.length) return '<div class="log-empty">近 7 天無操作記錄</div>';
         const shown = all.slice(0, limit);
         const rows = shown.map(l => `<div class="log-entry"><span class="log-time">${escapeHtml(l.time)}</span><span class="log-text">${escapeHtml(l.text)}</span></div>`).join('');
@@ -865,7 +885,7 @@ const firebaseConfig = {
         return rows + more;
     }
 
-    window.toggleItemLog = function(itemId) {
+    window.toggleItemLog = async function(itemId) {
         const isOpen = logExpandState[itemId] > 0;
         if (isOpen) {
             logExpandState[itemId] = 0;
@@ -877,18 +897,22 @@ const firebaseConfig = {
             if (cardBtn) { cardBtn.textContent = "▼ 展開明細"; cardBtn.classList.remove("open"); }
         } else {
             logExpandState[itemId] = 10;
-            const content = renderItemLogContent(itemId, 10);
+            const loading = '<div class="log-empty">載入中…</div>';
             const subrow = document.getElementById(`log-subrow-${itemId}`);
             if (subrow) {
-                document.getElementById(`log-subrow-content-${itemId}`).innerHTML = content;
+                document.getElementById(`log-subrow-content-${itemId}`).innerHTML = loading;
                 subrow.classList.remove("hidden");
             }
             const cardLog = document.getElementById(`card-log-${itemId}`);
-            if (cardLog) { cardLog.innerHTML = content; cardLog.classList.remove("hidden"); }
+            if (cardLog) { cardLog.innerHTML = loading; cardLog.classList.remove("hidden"); }
             const tableBtn = document.getElementById(`log-toggle-table-${itemId}`);
             if (tableBtn) { tableBtn.textContent = "收合"; tableBtn.classList.add("open"); }
             const cardBtn = document.getElementById(`log-toggle-card-${itemId}`);
             if (cardBtn) { cardBtn.textContent = "▲ 收合明細"; cardBtn.classList.add("open"); }
+            await fetchItemLogs(itemId);
+            const content = renderItemLogContent(itemId, 10);
+            if (subrow) document.getElementById(`log-subrow-content-${itemId}`).innerHTML = content;
+            if (cardLog && !cardLog.classList.contains("hidden")) cardLog.innerHTML = content;
         }
     };
 
@@ -1031,11 +1055,11 @@ const firebaseConfig = {
 
     function renderLogs() {
         const container = document.getElementById("logContainer");
-        if (!logs.length) {
+        if (!globalLogs.length) {
             container.innerHTML = '<div style="text-align:center;color:#9aa6a0;">暫無紀錄</div>';
             return;
         }
-        container.innerHTML = logs.slice(0, 80).map(l => `<div class="log-line"><span class="log-time">${escapeHtml(l.time || "")}</span><span>${escapeHtml(l.text || "")}</span></div>`).join("");
+        container.innerHTML = globalLogs.map(l => `<div class="log-line"><span class="log-time">${escapeHtml(l.time || "")}</span><span>${escapeHtml(l.text || "")}</span></div>`).join("");
     }
 
     window.filterCategory = function(cat) {
@@ -1045,10 +1069,20 @@ const firebaseConfig = {
     };
 
 
-    window.clearLogs = function() {
+    window.clearLogs = async function() {
         if (!guardOnline()) return;
         if (!confirm("確定要清除所有紀錄嗎？所有連線設備都會同步清除。")) return;
-        runStockTransaction((items, txLogs) => { txLogs.length = 0; });
+        const snap = await getDocs(logsRef);
+        if (!snap.size) { showToast("沒有紀錄可清除"); return; }
+        const BATCH_SIZE = 500;
+        let batch = writeBatch(db);
+        let count = 0;
+        for (const d of snap.docs) {
+            batch.delete(d.ref);
+            if (++count % BATCH_SIZE === 0) { await batch.commit(); batch = writeBatch(db); }
+        }
+        if (count % BATCH_SIZE !== 0) await batch.commit();
+        showToast("✅ 紀錄已清除");
     };
 
     window.addEventListener("beforeinstallprompt", (event) => {
