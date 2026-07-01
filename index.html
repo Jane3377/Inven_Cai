@@ -309,9 +309,6 @@
 
         <div class="toolbar">
             <input id="searchInput" class="search-input" type="search" placeholder="搜尋品項、分類或單位…" oninput="renderInventory()">
-            <div class="chip-row">
-                <label class="chip"><input id="showInactive" type="checkbox" onchange="renderInventory()"> <span id="showInactiveLabel">顯示停用品項</span></label>
-            </div>
         </div>
 
         <div class="filter-container" id="filterContainer"></div>
@@ -432,7 +429,7 @@ const firebaseConfig = {
             syncing: '同步中…', synced: '✓ 已同步', sync_failed: '⚠ 連線失敗，僅供檢視',
                 col_cat: '類別', col_name: '食材 / 物品', col_wh: '大倉', col_prep: '備貨',
             col_alert: '提醒', col_qty: '數量', col_action: '動作', col_info: '資訊',
-            search_ph: '搜尋品項、分類或單位…', show_inactive: '顯示停用品項',
+            search_ph: '搜尋品項、分類或單位…',
             alert_title: '⚠️ 叫貨提醒：', alert_sub: '以下大倉區庫存低於安全線，請安排叫貨。',
             log_title: '🕒 異動日誌', clear_logs: '清除紀錄',
             pin_title: '🔒 請輸入盤點代碼', pin_sub: '盤點代碼可在品項管理後台 → 系統設定中修改',
@@ -476,7 +473,7 @@ const firebaseConfig = {
             syncing: 'Đang đồng bộ…', synced: '✓ Đã đồng bộ', sync_failed: '⚠ Mất kết nối, chỉ xem',
             col_cat: 'Loại', col_name: 'Nguyên liệu / Vật phẩm', col_wh: 'Kho chính', col_prep: 'Sơ chế',
             col_alert: 'Cảnh báo', col_qty: 'Số lượng', col_action: 'Thao tác', col_info: 'Thông tin',
-            search_ph: 'Tìm kiếm mặt hàng, danh mục…', show_inactive: 'Hiển thị mặt hàng ngưng dùng',
+            search_ph: 'Tìm kiếm mặt hàng, danh mục…',
             alert_title: '⚠️ Nhắc đặt hàng：', alert_sub: 'Kho chính dưới mức an toàn, hãy đặt hàng.',
             log_title: '🕒 Nhật ký thay đổi', clear_logs: 'Xóa nhật ký',
             pin_title: '🔒 Nhập mã kiểm kê', pin_sub: 'Mã kiểm kê có thể thay đổi trong trang quản trị → Cài đặt hệ thống',
@@ -532,7 +529,6 @@ const firebaseConfig = {
         set('th-col-action', t('col_action'));
         set('th-col-info', t('col_info'));
         const si = document.getElementById('searchInput'); if (si) si.placeholder = t('search_ph');
-        set('showInactiveLabel', t('show_inactive'));
         set('alertBoxTitle', t('alert_title'));
         set('alertBoxSub', t('alert_sub'));
         set('logSectionTitle', t('log_title'));
@@ -808,9 +804,8 @@ const firebaseConfig = {
 
     function filteredItems() {
         const q = document.getElementById("searchInput")?.value.trim().toLowerCase() || "";
-        const showInactive = document.getElementById("showInactive")?.checked || false;
         return inventoryData.filter(item => {
-            if (!showInactive && item.active === false) return false;
+            if (item.active === false) return false;
             if (currentCategoryFilter !== "全部" && item.category !== currentCategoryFilter) return false;
             if (!q) return true;
             return [item.name, item.nameVi || '', item.category, item.displayUnit, item.baseUnit].join(" ").toLowerCase().includes(q);
