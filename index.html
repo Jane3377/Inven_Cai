@@ -231,6 +231,8 @@
         tr.count-dirty .count-table-confirm-btn { background: #f59e0b; }
         tr.count-confirmed td { background: #f4fbf4 !important; }
         tr.count-confirmed .count-table-confirm-btn { background: #43a047; }
+        .full-count-bar { background: #f0faf2; border: 1.5px solid #a8d5b0; border-radius: 14px; padding: 12px 16px; margin-bottom: 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .full-count-progress { font-size: 15px; font-weight: 800; color: var(--primary-dark); flex: 1; min-width: 100px; }
         /* === Quick action inline (table rows) === */
         .qact-input-wrap { display: flex; align-items: center; gap: 6px; }
         .qact-qty { width: 76px; border: 1.5px solid #cdd7d1; border-radius: 10px; padding: 8px 10px; font-size: 15px; background: #fff; text-align: center; }
@@ -341,12 +343,21 @@
     </div>
     <!-- Count content -->
     <div id="countContent" class="hidden">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
             <div>
                 <strong style="font-size:18px;color:var(--primary-dark);">📋 庫存盤點</strong>
                 <div style="font-size:13px;color:#8a9690;margin-top:4px;">輸入各倉位實際數量（顯示單位），確認後寫入系統</div>
+                <div id="lastFullCountInfo" style="font-size:12px;color:#8a9690;margin-top:3px;"></div>
             </div>
-            <button class="btn btn-ghost btn-small" type="button" onclick="lockCount()">🔒 鎖定盤點</button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <button class="btn btn-primary btn-small" id="startFullCountBtn" type="button" onclick="startFullCount()">全品項盤點</button>
+                <button class="btn btn-ghost btn-small" type="button" onclick="lockCount()">🔒 鎖定</button>
+            </div>
+        </div>
+        <div id="fullCountBar" class="full-count-bar" style="display:none;">
+            <span class="full-count-progress" id="fullCountProgress">已確認 0 / 0 項</span>
+            <button class="btn btn-ghost btn-small" type="button" onclick="cancelFullCount()">取消</button>
+            <button class="btn btn-primary btn-small" type="button" onclick="finishFullCount()">✓ 完成盤點</button>
         </div>
         <div id="countItems" class="count-items-grid"></div>
     </div>
@@ -560,6 +571,7 @@ const firebaseConfig = {
             settings = { categories: [], locations: Object.values(LOCATION_DEFS) };
         }
         renderAll();
+        updateLastFullCountInfo();
     }, (error) => {
         console.error("讀取資料失敗:", error);
         setSyncStatus("failed");
@@ -1098,6 +1110,8 @@ const firebaseConfig = {
     };
 
     let countUnlocked = false;
+    let fullCountMode = false;
+    let fullCountConfirmed = new Set();
 
     window.openCountTab = function() {
         document.getElementById("tabCount")?.classList.add("active");
@@ -1131,10 +1145,67 @@ const firebaseConfig = {
     };
 
     window.lockCount = function() {
+        fullCountMode = false;
+        fullCountConfirmed = new Set();
         countUnlocked = false;
         document.getElementById("countPinOverlay").classList.remove("hidden");
         document.getElementById("countContent").classList.add("hidden");
         document.getElementById("countPinInput").value = "";
+    };
+
+    function updateLastFullCountInfo() {
+        const el = document.getElementById('lastFullCountInfo');
+        if (!el) return;
+        if (settings.lastFullCountAt) {
+            const d = new Date(settings.lastFullCountAt);
+            el.textContent = `上次全品項盤點：${d.toLocaleDateString('zh-TW')} ${d.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+        } else {
+            el.textContent = '（尚無完整盤點紀錄）';
+        }
+    }
+
+    function updateFullCountProgress() {
+        const total = inventoryData.filter(i => i.active !== false).length;
+        const el = document.getElementById('fullCountProgress');
+        if (el) el.textContent = `已確認 ${fullCountConfirmed.size} / ${total} 項`;
+    }
+
+    window.startFullCount = function() {
+        fullCountMode = true;
+        fullCountConfirmed = new Set();
+        document.getElementById('fullCountBar').style.display = 'flex';
+        document.getElementById('startFullCountBtn').style.display = 'none';
+        renderCountItems();
+        updateFullCountProgress();
+    };
+
+    window.cancelFullCount = function() {
+        fullCountMode = false;
+        fullCountConfirmed = new Set();
+        document.getElementById('fullCountBar').style.display = 'none';
+        document.getElementById('startFullCountBtn').style.display = '';
+        renderCountItems();
+    };
+
+    window.finishFullCount = async function() {
+        if (!guardOnline()) return;
+        const total = inventoryData.filter(i => i.active !== false).length;
+        if (fullCountConfirmed.size < total) {
+            alert(`還有 ${total - fullCountConfirmed.size} 項尚未確認，請繼續完成後再結束盤點。`);
+            return;
+        }
+        try {
+            await setDoc(docRef, { settings: { ...settings, lastFullCountAt: Date.now() } }, { merge: true });
+        } catch (e) {
+            console.warn('儲存盤點完成時間失敗', e);
+        }
+        showToast('✅ 全品項盤點完成！');
+        fullCountMode = false;
+        fullCountConfirmed = new Set();
+        document.getElementById('fullCountBar').style.display = 'none';
+        document.getElementById('startFullCountBtn').style.display = '';
+        renderCountItems();
+        updateLastFullCountInfo();
     };
 
     function countLocKeys(item) {
@@ -1210,6 +1281,17 @@ const firebaseConfig = {
                 </table>
             </div>
             <div class="count-cards-mobile count-items-grid">${cards}</div>`;
+
+        if (fullCountMode) {
+            fullCountConfirmed.forEach(id => {
+                const c = document.getElementById(`count-card-${id}`);
+                if (c) { c.classList.remove('count-dirty'); c.classList.add('count-confirmed'); }
+                const t = document.getElementById(`count-tr-${id}`);
+                if (t) { t.classList.remove('count-dirty'); t.classList.add('count-confirmed'); }
+            });
+            updateFullCountProgress();
+        }
+        updateLastFullCountInfo();
     }
 
     window.markCountDirty = function(itemId) {
@@ -1258,6 +1340,10 @@ const firebaseConfig = {
             if (card) { card.classList.remove("count-dirty"); card.classList.add("count-confirmed"); }
             const tr = document.getElementById(`count-tr-${itemId}`);
             if (tr) { tr.classList.remove("count-dirty"); tr.classList.add("count-confirmed"); }
+            if (fullCountMode) {
+                fullCountConfirmed.add(String(itemId));
+                updateFullCountProgress();
+            }
         });
     };
 
