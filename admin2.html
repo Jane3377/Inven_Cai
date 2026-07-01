@@ -233,10 +233,11 @@
         <div class="section-header"><h2>系統設定</h2></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;">
             <div class="settings-card">
-                <h3>修改管理後台 PIN 碼</h3>
+                <h3>管理後台 PIN 碼</h3>
+                <p style="font-size:13px;color:#666;margin-bottom:12px;">登入管理後台使用。</p>
                 <div class="form-group">
                     <label>目前 PIN 碼</label>
-                    <input type="password" id="currentPin" maxlength="4" inputmode="numeric" placeholder="輸入目前 PIN">
+                    <div id="adminPinDisplay" style="font-size:22px;letter-spacing:8px;font-weight:700;color:#1b5e20;padding:4px 0;">––</div>
                 </div>
                 <div class="form-group">
                     <label>新 PIN 碼（4 位數字）</label>
@@ -246,25 +247,25 @@
                     <label>確認新 PIN 碼</label>
                     <input type="password" id="confirmPin" maxlength="4" inputmode="numeric" placeholder="再次輸入新 PIN">
                 </div>
-                <button class="btn btn-primary" onclick="changePin()">確認修改</button>
+                <button class="btn btn-primary" onclick="changePin()">儲存</button>
             </div>
             <div class="settings-card">
                 <h3>盤點 PIN 碼</h3>
-                <p style="font-size:13px;color:#666;margin-bottom:12px;">員工在庫存頁籤進入「盤點」時須輸入此 PIN 碼。</p>
+                <p style="font-size:13px;color:#666;margin-bottom:12px;">員工進入盤點功能時須輸入此 PIN 碼。</p>
                 <div class="form-group">
-                    <label>目前狀態</label>
-                    <div id="countPinDisplay" style="font-size:14px;color:#555;padding:6px 0;">（載入中）</div>
+                    <label>目前 PIN 碼</label>
+                    <div id="countPinDisplay" style="font-size:22px;letter-spacing:8px;font-weight:700;color:#1b5e20;padding:4px 0;">––</div>
                 </div>
                 <div class="form-group">
-                    <label>新盤點 PIN 碼（4 位數字）</label>
-                    <input type="password" id="newCountPin" maxlength="4" inputmode="numeric" placeholder="輸入新盤點 PIN">
+                    <label>新 PIN 碼（4 位數字）</label>
+                    <input type="password" id="newCountPin" maxlength="4" inputmode="numeric" placeholder="輸入新 PIN">
                 </div>
                 <div class="form-group">
-                    <label>確認盤點 PIN 碼</label>
-                    <input type="password" id="confirmCountPin" maxlength="4" inputmode="numeric" placeholder="再次輸入">
+                    <label>確認新 PIN 碼</label>
+                    <input type="password" id="confirmCountPin" maxlength="4" inputmode="numeric" placeholder="再次輸入新 PIN">
                 </div>
                 <div style="display:flex;gap:8px;">
-                    <button class="btn btn-primary" onclick="changeCountPin()">儲存盤點 PIN</button>
+                    <button class="btn btn-primary" onclick="changeCountPin()">儲存</button>
                     <button class="btn btn-outline" onclick="clearCountPin()">清除</button>
                 </div>
             </div>
@@ -545,8 +546,10 @@
         }
         renderCategories();
         refreshReportCategories();
+        const apDisplay = document.getElementById('adminPinDisplay');
+        if (apDisplay) apDisplay.textContent = adminPin || '––';
         const cpDisplay = document.getElementById('countPinDisplay');
-        if (cpDisplay) cpDisplay.textContent = countPin ? `目前：${countPin.replace(/./g, '●')}` : '（尚未設定）';
+        if (cpDisplay) cpDisplay.textContent = countPin || '（尚未設定）';
     });
 
     async function runItemTransaction(mutate) {
@@ -890,17 +893,17 @@
 
     // ── PIN change ────────────────────────────────────────
     window.changePin = function() {
-        const current = document.getElementById('currentPin').value;
-        const newP    = document.getElementById('newPin').value;
-        const confP   = document.getElementById('confirmPin').value;
-        if (current !== adminPin) { alert('目前 PIN 碼不正確'); return; }
-        if (!/^\d{4}$/.test(newP)) { alert('新 PIN 碼必須是 4 位數字'); return; }
-        if (newP !== confP) { alert('新 PIN 碼與確認碼不一致'); return; }
+        const newP  = document.getElementById('newPin').value;
+        const confP = document.getElementById('confirmPin').value;
+        if (!/^\d{4}$/.test(newP)) { alert('PIN 碼必須是 4 位數字'); return; }
+        if (newP !== confP) { alert('兩次輸入不一致'); return; }
         setDoc(settingsRef, { categories, adminPin: newP }, { merge: true })
             .then(() => {
                 adminPin = newP;
+                const el = document.getElementById('adminPinDisplay');
+                if (el) el.textContent = newP;
                 showToast('✅ 管理 PIN 已更新');
-                ['currentPin', 'newPin', 'confirmPin'].forEach(id => { document.getElementById(id).value = ''; });
+                ['newPin', 'confirmPin'].forEach(id => { document.getElementById(id).value = ''; });
             })
             .catch(e => alert('儲存失敗：' + e.message));
     };
@@ -908,11 +911,13 @@
     window.changeCountPin = function() {
         const newP  = document.getElementById('newCountPin').value;
         const confP = document.getElementById('confirmCountPin').value;
-        if (!/^\d{4}$/.test(newP)) { alert('盤點 PIN 碼必須是 4 位數字'); return; }
+        if (!/^\d{4}$/.test(newP)) { alert('PIN 碼必須是 4 位數字'); return; }
         if (newP !== confP) { alert('兩次輸入不一致'); return; }
         setDoc(settingsRef, { countPin: newP }, { merge: true })
             .then(() => {
                 countPin = newP;
+                const el = document.getElementById('countPinDisplay');
+                if (el) el.textContent = newP;
                 showToast('✅ 盤點 PIN 已更新');
                 ['newCountPin', 'confirmCountPin'].forEach(id => { document.getElementById(id).value = ''; });
             })
@@ -922,7 +927,12 @@
     window.clearCountPin = function() {
         if (!confirm('確定要清除盤點 PIN 碼嗎？清除後盤點功能將無法使用。')) return;
         setDoc(settingsRef, { countPin: "" }, { merge: true })
-            .then(() => { countPin = ""; showToast('✅ 盤點 PIN 已清除'); })
+            .then(() => {
+                countPin = "";
+                const el = document.getElementById('countPinDisplay');
+                if (el) el.textContent = '（尚未設定）';
+                showToast('✅ 盤點 PIN 已清除');
+            })
             .catch(e => alert('儲存失敗：' + e.message));
     };
 
