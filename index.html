@@ -284,7 +284,7 @@
     <header class="hero">
         <div>
             <h1>🍕 蔡叔叔比薩屋 - 庫存管理 v2</h1>
-            <p class="subtitle">平板優先・手機卡片式・多庫位・支援 g / 包換算・PWA <span class="pwa-hint">｜可加入主畫面</span></p>
+            <p class="subtitle">平板優先・手機卡片式・多庫位・支援 g / 包換算</p>
         </div>
         <div class="header-actions">
             <div class="lang-toggle">
@@ -292,7 +292,6 @@
                 <button class="lang-btn" id="langVi" type="button" onclick="setLang('vi')">VI</button>
             </div>
             <div class="sync-status sync-syncing" id="syncStatus"><span class="dot"></span><span id="syncText">同步中…</span></div>
-            <button class="btn btn-ghost btn-small" id="installPwaBtn" type="button" onclick="installPwaPrompt()">加入主畫面</button>
         </div>
     </header>
 
@@ -368,7 +367,7 @@
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
                 <button class="btn btn-primary btn-small" id="startFullCountBtn" type="button" onclick="startFullCount()">全品項盤點</button>
-                <button class="btn btn-ghost btn-small" id="lockCountBtn" type="button" onclick="lockCount()">🔒 鎖定</button>
+                <button class="btn btn-ghost btn-small" id="lockCountBtn" type="button" onclick="lockCount()">🔒 登出</button>
             </div>
         </div>
         <div id="fullCountBar" class="full-count-bar" style="display:none;">
@@ -425,15 +424,13 @@ const firebaseConfig = {
     let settings = { categories: [], locations: Object.values(LOCATION_DEFS), countPin: "" };
     let currentCategoryFilter = "全部";
     let isOffline = false;
-    let deferredInstallPrompt = null;
 
     // ── Language (i18n) ────────────────────────────────────────
     const T = {
         zh: {
             tab_stock: '庫存操作', tab_count: '📋 盤點',
             syncing: '同步中…', synced: '✓ 已同步', sync_failed: '⚠ 連線失敗，僅供檢視',
-            install_pwa: '加入主畫面',
-            col_cat: '類別', col_name: '食材 / 物品', col_wh: '大倉', col_prep: '備貨',
+                col_cat: '類別', col_name: '食材 / 物品', col_wh: '大倉', col_prep: '備貨',
             col_alert: '提醒', col_qty: '數量', col_action: '動作', col_info: '資訊',
             search_ph: '搜尋品項、分類或單位…', show_inactive: '顯示停用品項',
             alert_title: '⚠️ 叫貨提醒：', alert_sub: '以下大倉區庫存低於安全線，請安排叫貨。',
@@ -441,7 +438,7 @@ const firebaseConfig = {
             pin_title: '🔒 請輸入盤點代碼', pin_sub: '盤點代碼可在品項管理後台 → 系統設定中修改',
             pin_btn: '進入盤點', pin_error: '代碼錯誤，請再試一次',
             count_title: '📋 庫存盤點', count_sub: '輸入各倉位實際數量（顯示單位），確認後寫入系統',
-            full_count_btn: '全品項盤點', lock_btn: '🔒 鎖定',
+            full_count_btn: '全品項盤點', lock_btn: '🔒 登出',
             cancel_btn: '取消', finish_btn: '✓ 完成盤點',
             cat_all: '全部',
             badge_off: '停用', badge_low: '⚠️ 補貨', badge_ok: '✅ 充足',
@@ -472,13 +469,11 @@ const firebaseConfig = {
             confirm_clear: '確定要清除所有紀錄嗎？所有連線設備都會同步清除。',
             toast_synced: '已寫入並同步庫存', toast_no_change: '數量無變動，未寫入',
             toast_cleared: '✅ 紀錄已清除', toast_no_logs: '沒有紀錄可清除',
-            toast_pwa: '可使用瀏覽器分享選單加入主畫面',
-            tx_error: '操作未完成（可能因其他裝置同時操作），請再試一次：',
+                tx_error: '操作未完成（可能因其他裝置同時操作），請再試一次：',
         },
         vi: {
             tab_stock: 'Kho hàng', tab_count: '📋 Kiểm kê',
             syncing: 'Đang đồng bộ…', synced: '✓ Đã đồng bộ', sync_failed: '⚠ Mất kết nối, chỉ xem',
-            install_pwa: 'Thêm màn hình chính',
             col_cat: 'Loại', col_name: 'Nguyên liệu / Vật phẩm', col_wh: 'Kho chính', col_prep: 'Sơ chế',
             col_alert: 'Cảnh báo', col_qty: 'Số lượng', col_action: 'Thao tác', col_info: 'Thông tin',
             search_ph: 'Tìm kiếm mặt hàng, danh mục…', show_inactive: 'Hiển thị mặt hàng ngưng dùng',
@@ -487,7 +482,7 @@ const firebaseConfig = {
             pin_title: '🔒 Nhập mã kiểm kê', pin_sub: 'Mã kiểm kê có thể thay đổi trong trang quản trị → Cài đặt hệ thống',
             pin_btn: 'Vào kiểm kê', pin_error: 'Mã sai, vui lòng thử lại',
             count_title: '📋 Kiểm kê kho', count_sub: 'Nhập số lượng thực tế từng khu vực, xác nhận để ghi vào hệ thống',
-            full_count_btn: 'Kiểm kê toàn bộ', lock_btn: '🔒 Khóa',
+            full_count_btn: 'Kiểm kê toàn bộ', lock_btn: '🔒 Đăng xuất',
             cancel_btn: 'Hủy', finish_btn: '✓ Hoàn thành kiểm kê',
             cat_all: 'Tất cả',
             badge_off: 'Ngưng dùng', badge_low: '⚠️ Bổ sung', badge_ok: '✅ Đủ hàng',
@@ -518,7 +513,6 @@ const firebaseConfig = {
             confirm_clear: 'Xóa toàn bộ nhật ký? Tất cả thiết bị kết nối sẽ đồng bộ xóa.',
             toast_synced: 'Đã ghi và đồng bộ kho hàng', toast_no_change: 'Số lượng không thay đổi, không ghi',
             toast_cleared: '✅ Đã xóa nhật ký', toast_no_logs: 'Không có nhật ký để xóa',
-            toast_pwa: 'Dùng menu chia sẻ của trình duyệt để thêm màn hình chính',
             tx_error: 'Thao tác chưa hoàn thành (có thể do thiết bị khác đồng thời), vui lòng thử lại：',
         }
     };
@@ -529,7 +523,6 @@ const firebaseConfig = {
         const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
         set('tabStock', t('tab_stock'));
         set('tabCount', t('tab_count'));
-        set('installPwaBtn', t('install_pwa'));
         set('th-col-cat', t('col_cat'));
         set('th-col-name', t('col_name'));
         set('th-col-wh', t('col_wh'));
@@ -947,7 +940,7 @@ const firebaseConfig = {
                     <div class="info-cell-btns">
                         <div style="position:relative;">
                             <button class="qact-info" type="button" onclick="toggleInfoPop(event,${item.id})">${t('btn_info')}</button>
-                            <div class="info-pop hidden" id="info-pop-${item.id}">${infoLines.map(l => escapeHtml(l)).join("<br>")}${item.notes ? `<div class="info-notes">${escapeHtml(item.notes)}</div>` : ""}</div>
+                            <div class="info-pop hidden" id="info-pop-${item.id}">${infoLines.map(l => escapeHtml(l)).join("<br>")}${item.notes ? `<div class="info-notes"><span style="opacity:0.7;">備註：</span>${escapeHtml(item.notes)}</div>` : ""}</div>
                         </div>
                         <button class="qact-log-toggle" id="log-toggle-table-${item.id}" type="button" onclick="toggleItemLog(${item.id})">${t('detail_open')}</button>
                     </div>
@@ -986,7 +979,7 @@ const firebaseConfig = {
                     ${item.active === false ? `<span class="badge badge-off">${t('badge_off')}</span>` : isLow ? `<span class="badge badge-low">${t('badge_low_s')}</span>` : `<span class="badge badge-ok">${t('badge_ok_s')}</span>`}
                 </div>
                 <div class="location-grid">${locKeys.map(key => `<div class="location-tile"><div class="loc">${LOCATION_DEFS[key].name}</div><div class="qty">${formatQty(item, normalizeNumber(item.locations?.[key], 0))}</div></div>`).join("")}</div>
-                ${item.notes ? `<div class="card-notes">${escapeHtml(item.notes)}</div>` : ""}
+                ${item.notes ? `<div class="card-notes"><span style="opacity:0.6;">備註：</span>${escapeHtml(item.notes)}</div>` : ""}
                 <div class="card-actions">
                     <button class="card-act-btn act-receive" id="actbtn-receive-${item.id}" type="button" ${dis} onclick="toggleCardAction(${item.id},'receive')">${t('btn_receive_c')}</button>
                     ${item.enableThaw ? `<button class="card-act-btn act-prep" id="actbtn-prep-${item.id}" type="button" ${dis} onclick="toggleCardAction(${item.id},'prep')">${t('btn_prep_c')}</button>` : ""}
@@ -1275,10 +1268,6 @@ const firebaseConfig = {
         showToast(t('toast_cleared'));
     };
 
-    window.addEventListener("beforeinstallprompt", (event) => {
-        event.preventDefault();
-        deferredInstallPrompt = event;
-    });
     // ── Tab switching ──────────────────────────────────────────
     window.openStockTab = function() {
         document.getElementById("tabStock")?.classList.add("active");
@@ -1540,15 +1529,6 @@ const firebaseConfig = {
         });
     };
 
-    window.installPwaPrompt = async function() {
-        if (!deferredInstallPrompt) {
-            showToast(t('toast_pwa'));
-            return;
-        }
-        deferredInstallPrompt.prompt();
-        await deferredInstallPrompt.userChoice;
-        deferredInstallPrompt = null;
-    };
 
     applyStaticLang();
 
