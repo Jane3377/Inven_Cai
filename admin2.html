@@ -92,6 +92,9 @@
         /* Settings */
         .settings-card { background: white; border-radius: 8px; padding: 20px; max-width: 400px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
         .settings-card h3 { margin-bottom: 14px; font-size: 16px; color: #333; }
+        .toggle-group { display: flex; flex-direction: column; gap: 6px; padding-top: 6px; }
+        .toggle-group label { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; font-weight: normal; }
+        .toggle-group input[type="checkbox"] { width: 17px; height: 17px; cursor: pointer; accent-color: var(--primary); }
 
         /* Toast */
         #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; display: none; z-index: 200; pointer-events: none; white-space: nowrap; }
@@ -256,28 +259,34 @@
             </div>
         </div>
 
-        <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+        <div class="form-row">
             <div class="form-group">
-                <label>入庫庫位（進貨存入）</label>
-                <select id="editReceive"></select>
+                <label>主要使用區</label>
+                <select id="editPrimaryStation" onchange="refreshAllowedDisplay()">
+                    <option value="pizzaStation">比薩區</option>
+                    <option value="chickenStation">炸雞區</option>
+                </select>
+                <div class="help-text">消耗時從其他備貨移至此區</div>
+            </div>
+            <div class="form-group" id="enableThawWrap">
+                <label>需要解凍</label>
+                <div class="toggle-group">
+                    <label><input type="checkbox" id="enableThaw" onchange="refreshAllowedDisplay()"> 開啟（僅冷凍品適用）</label>
+                </div>
+                <div class="help-text">開啟後允許倉位加入「解凍冷藏」</div>
             </div>
             <div class="form-group">
-                <label>移倉目標（大倉→現場）</label>
-                <select id="editIssue"></select>
-            </div>
-            <div class="form-group">
-                <label>消耗庫位（從哪扣）</label>
-                <select id="editConsume"></select>
-            </div>
-            <div class="form-group">
-                <label>回放目標（備貨回倉）</label>
-                <select id="editReturn"></select>
+                <label>允許回放</label>
+                <div class="toggle-group">
+                    <label><input type="checkbox" id="enableReturn"> 開啟（預設關閉）</label>
+                </div>
+                <div class="help-text">開啟後員工可將備貨歸回大倉</div>
             </div>
         </div>
 
         <div class="form-group">
-            <label>允許使用的庫位</label>
-            <div class="checkbox-group" id="editAllowed"></div>
+            <label>倉位自動設定</label>
+            <div id="allowedDisplay" style="font-size:13px;color:#555;background:#f8f9fa;border-radius:8px;padding:10px 14px;line-height:2;"></div>
         </div>
 
         <div class="form-row">
@@ -351,8 +360,19 @@
     function nn(v, fb = 0) { const n = Number(v); return Number.isFinite(n) ? n : fb; }
     function esc(s) { return String(s ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c])); }
 
+    function computeAllowedLocations(storageType, enableThaw, primaryStation) {
+        const preset = STORAGE_PRESETS[storageType] || STORAGE_PRESETS['冷凍'];
+        const allowed = [...preset.allowed]; // e.g. ['warehouseFrozen', 'prep']
+        if (enableThaw && storageType === '冷凍') allowed.push('onsiteChilled');
+        if (primaryStation && !allowed.includes(primaryStation)) allowed.push(primaryStation);
+        return allowed;
+    }
+
     function normalizeItem(item, idx) {
-        const storageType = item.storageType || '冷凍';
+        const storageType    = item.storageType    || '冷凍';
+        const enableThaw     = item.enableThaw     === true;
+        const enableReturn   = item.enableReturn   === true;
+        const primaryStation = item.primaryStation || 'pizzaStation';
         const preset = STORAGE_PRESETS[storageType] || STORAGE_PRESETS['冷凍'];
         const basePerDisplay = nn(item.basePerDisplay, 1) || 1;
         const thresholdDisplay = nn(item.thresholdDisplay ?? item.thresholdBase ?? item.threshold, 0);
@@ -361,25 +381,25 @@
         locs.onsiteRoom = 0; // 舊欄位廢棄
         if (!item.locations) {
             locs[preset.receive] = nn(item.freezerStock, 0);
-            if (preset.issue !== preset.receive) locs[preset.issue] = nn(item.chillerStock, 0);
         }
         return {
             displayUnit: item.displayUnit || item.unit || '個',
             baseUnit: item.baseUnit || item.displayUnit || item.unit || '個',
             basePerDisplay,
-            storageType,
+            storageType, enableThaw, enableReturn, primaryStation,
             thresholdDisplay,
             thresholdBase: nn(item.thresholdBase, thresholdDisplay * basePerDisplay),
-            allowedLocations: Array.isArray(item.allowedLocations) && item.allowedLocations.length
-                ? item.allowedLocations : preset.allowed,
-            defaultReceiveLocation:  item.defaultReceiveLocation  || preset.receive,
-            defaultIssueLocation:    item.defaultIssueLocation    || preset.issue,
-            defaultConsumeLocation:  item.defaultConsumeLocation  || preset.consume || "prep",
-            defaultReturnLocation:   item.defaultReturnLocation   || preset.return  || preset.receive,
+            defaultReceiveLocation: preset.receive,
+            defaultIssueLocation:   enableThaw ? 'onsiteChilled' : preset.receive,
+            defaultConsumeLocation: 'prep',
+            defaultReturnLocation:  preset.receive,
             active: item.active !== false,
             sortOrder: nn(item.sortOrder, idx),
             ...item,
-            locations: locs
+            // 強制覆蓋：這些欄位一律由計算決定
+            storageType, enableThaw, enableReturn, primaryStation,
+            allowedLocations: computeAllowedLocations(storageType, enableThaw, primaryStation),
+            locations: locs,
         };
     }
 
@@ -523,15 +543,6 @@
     };
 
     // ── Item Editor ───────────────────────────────────────
-    function buildLocationOptions() {
-        return Object.entries(LOCATION_DEFS).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('');
-    }
-
-    function buildAllowedCheckboxes(allowed) {
-        return Object.entries(LOCATION_DEFS).map(([k, v]) =>
-            `<label><input type="checkbox" value="${k}" ${allowed.has(k) ? 'checked' : ''}> ${v.name}</label>`).join('');
-    }
-
     window.openItemEditor = function(itemId = null) {
         const item = itemId != null ? inventoryData.find(i => String(i.id) === String(itemId)) : null;
         document.getElementById('itemModalTitle').textContent = item ? '編輯品項' : '新增品項';
@@ -546,32 +557,40 @@
         document.getElementById('editSortOrder').value     = item?.sortOrder ?? (inventoryData.length + 1);
         document.getElementById('editActive').value        = String(item?.active !== false);
 
-        const locOpts = buildLocationOptions();
-        document.getElementById('editReceive').innerHTML = locOpts;
-        document.getElementById('editIssue').innerHTML   = locOpts;
-        document.getElementById('editConsume').innerHTML = locOpts;
-        document.getElementById('editReturn').innerHTML  = locOpts;
-        document.getElementById('editReceive').value = item?.defaultReceiveLocation  ?? 'warehouseFrozen';
-        document.getElementById('editIssue').value   = item?.defaultIssueLocation    ?? 'onsiteChilled';
-        document.getElementById('editConsume').value = item?.defaultConsumeLocation  ?? 'prep';
-        document.getElementById('editReturn').value  = item?.defaultReturnLocation   ?? item?.defaultReceiveLocation ?? 'warehouseFrozen';
+        document.getElementById('editPrimaryStation').value = item?.primaryStation ?? 'pizzaStation';
+        document.getElementById('enableThaw').checked       = item?.enableThaw === true;
+        document.getElementById('enableReturn').checked     = item?.enableReturn === true;
 
-        const allowed = new Set(item?.allowedLocations ?? ['warehouseFrozen', 'prep']);
-        document.getElementById('editAllowed').innerHTML = buildAllowedCheckboxes(allowed);
-
+        refreshThawVisibility();
+        refreshAllowedDisplay();
         document.getElementById('itemModal').classList.add('open');
     };
 
     window.onStorageTypeChange = function() {
-        const preset = STORAGE_PRESETS[document.getElementById('editStorageType').value];
-        if (!preset) return;
-        document.getElementById('editReceive').value = preset.receive;
-        document.getElementById('editIssue').value   = preset.issue;
-        document.getElementById('editConsume').value = preset.consume || 'prep';
-        document.getElementById('editReturn').value  = preset.return  || preset.receive;
-        document.querySelectorAll('#editAllowed input[type="checkbox"]').forEach(cb => {
-            cb.checked = preset.allowed.includes(cb.value);
-        });
+        refreshThawVisibility();
+        refreshAllowedDisplay();
+    };
+
+    function refreshThawVisibility() {
+        const storageType = document.getElementById('editStorageType').value;
+        const wrap = document.getElementById('enableThawWrap');
+        if (storageType !== '冷凍') {
+            document.getElementById('enableThaw').checked = false;
+            wrap.style.opacity = '0.4';
+            wrap.style.pointerEvents = 'none';
+        } else {
+            wrap.style.opacity = '';
+            wrap.style.pointerEvents = '';
+        }
+    }
+
+    window.refreshAllowedDisplay = function() {
+        const storageType    = document.getElementById('editStorageType').value;
+        const enableThaw     = document.getElementById('enableThaw').checked;
+        const primaryStation = document.getElementById('editPrimaryStation').value;
+        const allowed = computeAllowedLocations(storageType, enableThaw, primaryStation);
+        const labels = allowed.map(k => `<span style="display:inline-block;background:#e8f5e9;color:#2e7d32;border-radius:20px;padding:2px 10px;margin:2px;">${LOCATION_DEFS[k]?.name || k}</span>`);
+        document.getElementById('allowedDisplay').innerHTML = labels.join(' ');
     };
 
     window.closeItemModal = function() {
@@ -589,26 +608,26 @@
         const thresholdDisp  = nn(document.getElementById('editThreshold').value, 0);
         const sortOrder      = nn(document.getElementById('editSortOrder').value, inventoryData.length + 1);
         const active         = document.getElementById('editActive').value === 'true';
-        const defaultReceive  = document.getElementById('editReceive').value;
-        const defaultIssue    = document.getElementById('editIssue').value;
-        const defaultConsume  = document.getElementById('editConsume').value;
-        const defaultReturn   = document.getElementById('editReturn').value;
-        const allowedLocations = [...document.querySelectorAll('#editAllowed input:checked')].map(el => el.value);
+        const enableThaw     = document.getElementById('enableThaw').checked;
+        const enableReturn   = document.getElementById('enableReturn').checked;
+        const primaryStation = document.getElementById('editPrimaryStation').value;
+        const preset         = STORAGE_PRESETS[storageType] || STORAGE_PRESETS['冷凍'];
+        const allowedLocations = computeAllowedLocations(storageType, enableThaw, primaryStation);
 
         if (!name || !category || !displayUnit || !baseUnit) {
             alert('請完整填寫名稱、分類、顯示單位、基準單位'); return;
         }
-        if (!allowedLocations.length) { alert('請至少勾選一個允許庫位'); return; }
 
         const patch = {
             id: idVal ? nn(idVal) : Date.now(),
             name, category, storageType, displayUnit, baseUnit, basePerDisplay,
             thresholdDisplay: thresholdDisp,
             thresholdBase: thresholdDisp * basePerDisplay,
-            defaultReceiveLocation:  defaultReceive,
-            defaultIssueLocation:    defaultIssue,
-            defaultConsumeLocation:  defaultConsume,
-            defaultReturnLocation:   defaultReturn,
+            enableThaw, enableReturn, primaryStation,
+            defaultReceiveLocation: preset.receive,
+            defaultIssueLocation:   enableThaw ? 'onsiteChilled' : preset.receive,
+            defaultConsumeLocation: 'prep',
+            defaultReturnLocation:  preset.receive,
             allowedLocations, sortOrder, active
         };
 
