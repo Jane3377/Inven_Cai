@@ -247,6 +247,22 @@
         .info-pop .info-notes { margin-top: 8px; padding-top: 8px; border-top: 1px solid #3d5a4a; color: #b6cfc3; }
         .info-pop::before { content: ""; position: absolute; top: -6px; right: 12px; border: 6px solid transparent; border-top: 0; border-bottom-color: #23352b; }
         td.qact-td { white-space: nowrap; }
+        /* === Item log expand === */
+        .qact-log-toggle { background: transparent; border: 1px solid #cdd7d1; color: #7d8a83; padding: 6px 8px; border-radius: 8px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+        .qact-log-toggle.open { color: var(--primary-color); border-color: var(--primary-color); background: #eef7f0; }
+        .log-subrow > td { padding: 0 !important; }
+        .log-subrow-inner { padding: 10px 20px 14px; background: #f5f9f6; border-bottom: 2px solid #d0e4d8; }
+        .log-entry { display: flex; gap: 10px; padding: 5px 0; border-bottom: 1px solid #edf2ef; font-size: 12px; align-items: flex-start; }
+        .log-entry:last-of-type { border-bottom: 0; }
+        .log-time { color: #8a9e96; white-space: nowrap; flex-shrink: 0; min-width: 130px; }
+        .log-text { color: #2d4a38; line-height: 1.4; }
+        .log-empty { color: #8a9e96; font-size: 12px; padding: 6px 0; }
+        .log-more-btn { margin-top: 8px; background: none; border: 1px solid #cdd7d1; color: #5a7060; padding: 5px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; display: block; }
+        .card-log-toggle { width: 100%; margin-top: 8px; background: none; border: 1px solid #cdd7d1; color: #7d8a83; padding: 8px; border-radius: 10px; font-size: 13px; cursor: pointer; }
+        .card-log-toggle.open { color: var(--primary-color); border-color: var(--primary-color); background: #eef7f0; }
+        .card-log { margin-top: 6px; }
+        .card-log .log-entry { flex-direction: column; gap: 2px; padding: 6px 0; }
+        .card-log .log-time { min-width: unset; font-size: 11px; }
     </style>
 </head>
 <body>
@@ -574,7 +590,7 @@ const firebaseConfig = {
                 const txSettings = { categories: [], locations: Object.values(LOCATION_DEFS), ...(data.settings || {}) };
                 const result = mutate(items, txLogs, txSettings);
                 if (result === false) return;
-                if (txLogs.length > 100) txLogs = txLogs.slice(0, 100);
+                if (txLogs.length > 500) txLogs = txLogs.slice(0, 500);
                 tx.set(docRef, {
                     schemaVersion: SCHEMA_VERSION,
                     items: normalizeItems(items),
@@ -593,6 +609,7 @@ const firebaseConfig = {
         const now = new Date();
         txLogs.unshift({
             id: `${now.getTime()}-${Math.random().toString(36).slice(2, 8)}`,
+            ts: now.getTime(),
             time: now.toLocaleString("zh-TW", { hour12: false }),
             text,
             ...meta
@@ -658,6 +675,24 @@ const firebaseConfig = {
             const panel = document.getElementById(`card-panel-${itemId}`);
             if (panel) { panel.innerHTML = renderCardPanel(item, type); panel.classList.remove("hidden"); }
         });
+        Object.entries(logExpandState).forEach(([itemId, limit]) => {
+            if (!limit) return;
+            const content = renderItemLogContent(itemId, limit);
+            const subrow = document.getElementById(`log-subrow-${itemId}`);
+            if (subrow) {
+                document.getElementById(`log-subrow-content-${itemId}`).innerHTML = content;
+                subrow.classList.remove("hidden");
+                const btn = document.getElementById(`log-toggle-table-${itemId}`);
+                if (btn) { btn.textContent = "收合"; btn.classList.add("open"); }
+            }
+            const cardLog = document.getElementById(`card-log-${itemId}`);
+            if (cardLog) {
+                cardLog.innerHTML = content;
+                cardLog.classList.remove("hidden");
+                const btn = document.getElementById(`log-toggle-card-${itemId}`);
+                if (btn) { btn.textContent = "▲ 收合明細"; btn.classList.add("open"); }
+            }
+        });
         renderLogs();
     }
 
@@ -707,8 +742,12 @@ const firebaseConfig = {
                             <button class="qact-info" type="button" onclick="toggleInfoPop(event,${item.id})">ℹ️</button>
                             <div class="info-pop hidden" id="info-pop-${item.id}">${infoLines.map(l => escapeHtml(l)).join("<br>")}${item.notes ? `<div class="info-notes">${escapeHtml(item.notes)}</div>` : ""}</div>
                         </div>
+                        <button class="qact-log-toggle" id="log-toggle-table-${item.id}" type="button" onclick="toggleItemLog(${item.id})">明細</button>
                     </div>
                 </td>
+            </tr>
+            <tr class="log-subrow hidden" id="log-subrow-${item.id}">
+                <td colspan="8"><div class="log-subrow-inner" id="log-subrow-content-${item.id}"></div></td>
             </tr>`;
     }
 
@@ -748,6 +787,8 @@ const firebaseConfig = {
                     ${item.enableReturn ? `<button class="card-act-btn act-return" id="actbtn-return-${item.id}" type="button" ${dis} onclick="toggleCardAction(${item.id},'return')">↩️ 回放</button>` : ""}
                 </div>
                 <div class="card-panel hidden" id="card-panel-${item.id}"></div>
+                <button class="card-log-toggle" id="log-toggle-card-${item.id}" type="button" onclick="toggleItemLog(${item.id})">▼ 展開明細</button>
+                <div class="card-log hidden" id="card-log-${item.id}"></div>
             </article>`;
     }
 
@@ -808,7 +849,60 @@ const firebaseConfig = {
         document.querySelectorAll(".info-pop").forEach(p => p.classList.add("hidden"));
     });
 
+    function renderItemLogContent(itemId, limit) {
+        const sevenDaysAgo = Date.now() - 7 * 24 * 3600 * 1000;
+        const all = logs.filter(l => {
+            if (String(l.itemId) !== String(itemId)) return false;
+            const t = l.ts != null ? l.ts : new Date(l.time).getTime();
+            return t >= sevenDaysAgo;
+        });
+        if (!all.length) return '<div class="log-empty">近 7 天無操作記錄</div>';
+        const shown = all.slice(0, limit);
+        const rows = shown.map(l => `<div class="log-entry"><span class="log-time">${escapeHtml(l.time)}</span><span class="log-text">${escapeHtml(l.text)}</span></div>`).join('');
+        const more = all.length > limit
+            ? `<button class="log-more-btn" type="button" onclick="loadMoreItemLog(${itemId})">查看更多（已顯示 ${shown.length} / 共 ${all.length} 筆）</button>`
+            : '';
+        return rows + more;
+    }
+
+    window.toggleItemLog = function(itemId) {
+        const isOpen = logExpandState[itemId] > 0;
+        if (isOpen) {
+            logExpandState[itemId] = 0;
+            document.getElementById(`log-subrow-${itemId}`)?.classList.add("hidden");
+            document.getElementById(`card-log-${itemId}`)?.classList.add("hidden");
+            const tableBtn = document.getElementById(`log-toggle-table-${itemId}`);
+            if (tableBtn) { tableBtn.textContent = "明細"; tableBtn.classList.remove("open"); }
+            const cardBtn = document.getElementById(`log-toggle-card-${itemId}`);
+            if (cardBtn) { cardBtn.textContent = "▼ 展開明細"; cardBtn.classList.remove("open"); }
+        } else {
+            logExpandState[itemId] = 10;
+            const content = renderItemLogContent(itemId, 10);
+            const subrow = document.getElementById(`log-subrow-${itemId}`);
+            if (subrow) {
+                document.getElementById(`log-subrow-content-${itemId}`).innerHTML = content;
+                subrow.classList.remove("hidden");
+            }
+            const cardLog = document.getElementById(`card-log-${itemId}`);
+            if (cardLog) { cardLog.innerHTML = content; cardLog.classList.remove("hidden"); }
+            const tableBtn = document.getElementById(`log-toggle-table-${itemId}`);
+            if (tableBtn) { tableBtn.textContent = "收合"; tableBtn.classList.add("open"); }
+            const cardBtn = document.getElementById(`log-toggle-card-${itemId}`);
+            if (cardBtn) { cardBtn.textContent = "▲ 收合明細"; cardBtn.classList.add("open"); }
+        }
+    };
+
+    window.loadMoreItemLog = function(itemId) {
+        logExpandState[itemId] = (logExpandState[itemId] || 10) + 10;
+        const content = renderItemLogContent(itemId, logExpandState[itemId]);
+        const subrowContent = document.getElementById(`log-subrow-content-${itemId}`);
+        if (subrowContent) subrowContent.innerHTML = content;
+        const cardLog = document.getElementById(`card-log-${itemId}`);
+        if (cardLog && !cardLog.classList.contains("hidden")) cardLog.innerHTML = content;
+    };
+
     const cardPanelState = {};
+    const logExpandState = {};
 
     window.toggleCardAction = function(itemId, type) {
         if (!guardOnline()) return;
