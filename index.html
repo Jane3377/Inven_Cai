@@ -180,6 +180,7 @@
         .card-act-btn.act-return { border: 1.5px solid var(--warning-color); color: var(--warning-color); }
         .card-act-btn.act-return.active { background: var(--warning-color); color: #fff; }
         .card-act-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+        .card-notes { font-size: 12px; color: #5a6e64; background: #f0f5f2; border-radius: 8px; padding: 8px 12px; margin-top: 8px; white-space: pre-line; line-height: 1.6; }
         .card-panel { margin-top: 10px; padding: 14px; background: #f7faf8; border-radius: 14px; border: 1px solid #d8e5dc; }
         .panel-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
         .panel-label { font-size: 13px; font-weight: 800; color: #506059; white-space: nowrap; }
@@ -242,7 +243,8 @@
         .qact-consume { background: #ffebee; color: #c62828; }
         .qact-return  { background: #fff3e0; color: #e65100; }
         .qact-info    { background: transparent; border: 1px solid #cdd7d1; color: #7d8a83; padding: 6px 8px; border-radius: 8px; font-size: 13px; cursor: pointer; position: relative; }
-        .info-pop { position: absolute; right: 0; top: calc(100% + 6px); background: #23352b; color: #fff; border-radius: 12px; padding: 10px 14px; font-size: 12px; line-height: 1.8; white-space: nowrap; z-index: 50; box-shadow: 0 8px 24px rgba(0,0,0,0.22); }
+        .info-pop { position: absolute; right: 0; top: calc(100% + 6px); background: #23352b; color: #fff; border-radius: 12px; padding: 10px 14px; font-size: 12px; line-height: 1.8; white-space: pre-line; max-width: 280px; z-index: 50; box-shadow: 0 8px 24px rgba(0,0,0,0.22); }
+        .info-pop .info-notes { margin-top: 8px; padding-top: 8px; border-top: 1px solid #3d5a4a; color: #b6cfc3; }
         .info-pop::before { content: ""; position: absolute; top: -6px; right: 12px; border: 6px solid transparent; border-top: 0; border-bottom-color: #23352b; }
         td.qact-td { white-space: nowrap; }
     </style>
@@ -703,7 +705,7 @@ const firebaseConfig = {
                         ${item.enableReturn ? `<button class="qact-btn qact-return" type="button" ${dis} onclick="execQuickAction(${item.id},'return')">回放</button>` : ""}
                         <div style="position:relative;display:inline-block;">
                             <button class="qact-info" type="button" onclick="toggleInfoPop(event,${item.id})">ℹ️</button>
-                            <div class="info-pop hidden" id="info-pop-${item.id}">${infoLines.map(l => escapeHtml(l)).join("<br>")}</div>
+                            <div class="info-pop hidden" id="info-pop-${item.id}">${infoLines.map(l => escapeHtml(l)).join("<br>")}${item.notes ? `<div class="info-notes">${escapeHtml(item.notes)}</div>` : ""}</div>
                         </div>
                     </div>
                 </td>
@@ -738,6 +740,7 @@ const firebaseConfig = {
                     ${item.active === false ? '<span class="badge badge-off">停用</span>' : isLow ? '<span class="badge badge-low">補貨</span>' : '<span class="badge badge-ok">充足</span>'}
                 </div>
                 <div class="location-grid">${locKeys.map(key => `<div class="location-tile"><div class="loc">${LOCATION_DEFS[key].name}</div><div class="qty">${formatQty(item, normalizeNumber(item.locations?.[key], 0))}</div></div>`).join("")}</div>
+                ${item.notes ? `<div class="card-notes">${escapeHtml(item.notes)}</div>` : ""}
                 <div class="card-actions">
                     <button class="card-act-btn act-receive" id="actbtn-receive-${item.id}" type="button" ${dis} onclick="toggleCardAction(${item.id},'receive')">📦 入庫</button>
                     ${item.enableThaw ? `<button class="card-act-btn act-prep" id="actbtn-prep-${item.id}" type="button" ${dis} onclick="toggleCardAction(${item.id},'prep')">🍕 備料</button>` : ""}
