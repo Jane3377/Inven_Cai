@@ -1138,15 +1138,15 @@ const firebaseConfig = {
     };
 
     function countLocKeys(item) {
-        const configured = (item.allowedLocations || []).filter(k => !STATION_KEYS.includes(k));
-        const withStock = [...WAREHOUSE_KEYS, ...PREP_KEYS].filter(k => (item.locations?.[k] || 0) > 0);
-        const all = new Set([...configured, ...withStock]);
+        const primary = item.defaultReceiveLocation || 'warehouseFrozen';
+        const withStock = [...WAREHOUSE_KEYS, ...PREP_KEYS].filter(k => k !== primary && (item.locations?.[k] || 0) > 0);
+        const all = new Set([primary, ...withStock]);
         return [...WAREHOUSE_KEYS, ...PREP_KEYS].filter(k => all.has(k));
     }
 
     function renderCountLocInputs(item, keys) {
-        const configured = (item.allowedLocations || []).filter(k => !STATION_KEYS.includes(k));
-        const visible = keys.filter(k => configured.includes(k) || (item.locations?.[k] || 0) > 0);
+        const primary = item.defaultReceiveLocation || 'warehouseFrozen';
+        const visible = keys.filter(k => k === primary || (item.locations?.[k] || 0) > 0);
         if (!visible.length) return '<div style="color:#ccc;font-size:12px;text-align:center;">—</div>';
         return `<div class="count-input-stack">${visible.map(key => {
             const currentDisplay = toDisplayQty(item, normalizeNumber(item.locations?.[key], 0));

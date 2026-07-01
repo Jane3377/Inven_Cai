@@ -775,19 +775,30 @@
             allowedLocations, sortOrder, active, notes
         };
 
-        // Warn if a prep location is being removed but still has stock
+        // Warn if a prep location is losing its role but still has stock
         if (idVal) {
-            const PREP_KEYS = ['onsiteChilled', 'prep'];
+            const PREP_SET = new Set(['onsiteChilled', 'prep']);
             const existing = inventoryData.find(i => String(i.id) === String(idVal));
             if (existing) {
-                const oldPrep = (existing.allowedLocations || []).filter(k => PREP_KEYS.includes(k));
-                const newPrep = allowedLocations.filter(k => PREP_KEYS.includes(k));
-                const removed = oldPrep.filter(k => !newPrep.includes(k));
-                const warns = removed.filter(k => (existing.locations?.[k] || 0) > 0).map(k => {
-                    const qty = (existing.locations[k] / (existing.basePerDisplay || 1)).toFixed(2).replace(/\.?0+$/, '');
-                    return `「${LOCATION_DEFS[k].name}」目前有 ${qty} ${existing.displayUnit}`;
-                });
-                if (warns.length && !confirm(`注意：以下備料倉位將從設定中移除，但仍有庫存：\n\n${warns.join('\n')}\n\n請確認現場已處理，確定要繼續儲存嗎？`)) return;
+                const bpd = existing.basePerDisplay || 1;
+                const fmtStock = k => {
+                    const base = existing.locations?.[k] || 0;
+                    const disp = base / bpd;
+                    return `${Number.isInteger(disp) ? disp : disp.toFixed(2)} ${existing.displayUnit}`;
+                };
+                const warns = [];
+                // Issue location changed or thaw disabled — old issue loc loses prep role
+                const oldIssueLoc = existing.defaultIssueLocation;
+                const newIssueLoc = enableThaw ? defaultIssueLoc : null;
+                if (existing.enableThaw && PREP_SET.has(oldIssueLoc) && oldIssueLoc !== newIssueLoc && (existing.locations?.[oldIssueLoc] || 0) > 0) {
+                    warns.push(`備料倉「${LOCATION_DEFS[oldIssueLoc].name}」目前有 ${fmtStock(oldIssueLoc)}`);
+                }
+                // Consume location changed
+                const oldConsumeLoc = existing.defaultConsumeLocation;
+                if (PREP_SET.has(oldConsumeLoc) && oldConsumeLoc !== defaultConsumeLoc && (existing.locations?.[oldConsumeLoc] || 0) > 0) {
+                    warns.push(`消耗倉「${LOCATION_DEFS[oldConsumeLoc].name}」目前有 ${fmtStock(oldConsumeLoc)}`);
+                }
+                if (warns.length && !confirm(`注意：以下倉位設定將改變，但仍有庫存：\n\n${warns.join('\n')}\n\n請確認現場已處理，確定要繼續儲存嗎？`)) return;
             }
         }
 
