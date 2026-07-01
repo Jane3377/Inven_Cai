@@ -299,7 +299,7 @@
                         <th style="width:6%;">類別</th>
                         <th style="text-align:left;width:16%;">食材 / 物品</th>
                         <th style="width:14%;">大倉</th>
-                        <th style="width:12%;">備貨</th>
+                        <th style="width:12%;">備料</th>
                         <th style="width:10%;">提醒</th>
                         <th style="width:13%;">數量</th>
                         <th style="width:29%;">動作</th>
@@ -859,7 +859,7 @@ const firebaseConfig = {
                 <td><span class="badge badge-muted">${escapeHtml(item.category)}</span></td>
                 <td class="name-cell"><strong>${escapeHtml(item.name)}</strong><div class="help">${escapeHtml(item.basePerDisplay)} ${escapeHtml(item.baseUnit)} = 1 ${escapeHtml(item.displayUnit)}</div></td>
                 <td>${renderLocationStack(item, WAREHOUSE_KEYS)}</td>
-                <td>${renderPrepLocationsCell(item)}</td>
+                <td>${item.enableThaw ? renderSingleLocationCell(item, item.defaultIssueLocation) : '<div class="stock-stack" style="color:#ccc;font-size:12px;">—</div>'}</td>
                 <td>${item.active === false
                     ? '<span class="badge badge-off">停用</span>'
                     : isLow
@@ -900,25 +900,13 @@ const firebaseConfig = {
         return `<div class="stock-stack"><div class="stock-line"><span>${def.short}</span><strong>${formatQty(item, normalizeNumber(item.locations?.[key], 0), { compact: true })}</strong></div></div>`;
     }
 
-    function renderPrepLocationsCell(item) {
-        const issueDef   = LOCATION_DEFS[item.defaultIssueLocation];
-        const consumeDef = LOCATION_DEFS[item.defaultConsumeLocation];
-        const issueShort   = issueDef?.short   || item.defaultIssueLocation   || '備料';
-        const consumeShort = consumeDef?.short  || item.defaultConsumeLocation || '備貨';
-        const issueRow = item.enableThaw
-            ? `<div class="stock-line"><span>${issueShort}</span><strong>${formatQty(item, normalizeNumber(item.locations?.[item.defaultIssueLocation], 0), { compact: true })}</strong></div>`
-            : `<div class="stock-line" style="color:#bbb;"><span>${issueShort}</span><strong>—</strong></div>`;
-        const consumeQty = formatQty(item, normalizeNumber(item.locations?.[item.defaultConsumeLocation], 0), { compact: true });
-        return `<div class="stock-stack">${issueRow}<div class="stock-line"><span>${consumeShort}</span><strong>${consumeQty}</strong></div></div>`;
-    }
-
     function renderMobileCard(item) {
         const warehouseBase = sumLocations(item, itemStockKeys(item));
         const isLow = item.active !== false && warehouseBase <= item.thresholdBase;
-        const prepKeys = [item.defaultConsumeLocation, ...(item.enableThaw ? [item.defaultIssueLocation] : [])]
-            .filter((k, i, arr) => k && arr.indexOf(k) === i);
+        const prepKeys = item.enableThaw && item.defaultIssueLocation ? [item.defaultIssueLocation] : [];
         const locKeys = [...WAREHOUSE_KEYS, ...prepKeys].filter((key, i, arr) =>
-            arr.indexOf(key) === i && (item.allowedLocations.includes(key) || normalizeNumber(item.locations?.[key], 0) > 0) && LOCATION_DEFS[key]);
+            arr.indexOf(key) === i && LOCATION_DEFS[key] &&
+            (item.allowedLocations.includes(key) || normalizeNumber(item.locations?.[key], 0) > 0));
         const dis = item.active === false ? "disabled" : "";
         return `
             <article class="item-card ${item.active === false ? "inactive-row" : ""}">
