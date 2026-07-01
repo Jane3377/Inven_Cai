@@ -95,6 +95,8 @@
         .toggle-group { display: flex; flex-direction: column; gap: 6px; padding-top: 6px; }
         .toggle-group label { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; font-weight: normal; }
         .toggle-group input[type="checkbox"] { width: 17px; height: 17px; cursor: pointer; accent-color: var(--primary); }
+        .action-loc-select { flex: 1; padding: 7px 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; font-family: inherit; background: #fff; }
+        .action-loc-select:focus { outline: none; border-color: var(--primary); }
 
         /* Toast */
         #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; display: none; z-index: 200; pointer-events: none; white-space: nowrap; }
@@ -262,31 +264,62 @@
         <div class="form-row">
             <div class="form-group">
                 <label>主要使用區</label>
-                <select id="editPrimaryStation" onchange="refreshAllowedDisplay()">
+                <select id="editPrimaryStation">
                     <option value="pizzaStation">比薩區</option>
                     <option value="chickenStation">炸雞區</option>
                 </select>
                 <div class="help-text">消耗時從其他備貨移至此區</div>
             </div>
             <div class="form-group" id="enableThawWrap">
-                <label>需要解凍</label>
+                <label>需備料步驟</label>
                 <div class="toggle-group">
-                    <label><input type="checkbox" id="enableThaw" onchange="refreshAllowedDisplay()"> 開啟（僅冷凍品適用）</label>
+                    <label><input type="checkbox" id="enableThaw" onchange="onEnableThawChange()"> 開啟（僅冷凍品適用）</label>
                 </div>
-                <div class="help-text">開啟後允許倉位加入「解凍冷藏」</div>
+                <div class="help-text">開啟後員工可執行備料（大倉→備料區）</div>
             </div>
             <div class="form-group">
                 <label>允許回放</label>
                 <div class="toggle-group">
                     <label><input type="checkbox" id="enableReturn"> 開啟（預設關閉）</label>
                 </div>
-                <div class="help-text">開啟後員工可將備貨歸回大倉</div>
+                <div class="help-text">開啟後員工可將備貨退回大倉</div>
             </div>
         </div>
 
         <div class="form-group">
-            <label>倉位自動設定</label>
-            <div id="allowedDisplay" style="font-size:13px;color:#555;background:#f8f9fa;border-radius:8px;padding:10px 14px;line-height:2;"></div>
+            <label>動作倉位</label>
+            <div style="display:flex;flex-direction:column;gap:10px;background:#f8f9fa;border-radius:8px;padding:12px;">
+                <div style="display:flex;align-items:center;gap:10px;font-size:13px;">
+                    <span style="width:72px;color:#555;flex-shrink:0;">📦 入庫至</span>
+                    <select id="editReceiveLoc" class="action-loc-select">
+                        <option value="warehouseFrozen">大倉冷凍</option>
+                        <option value="warehouseChilled">大倉冷藏</option>
+                        <option value="warehouseRoom">大倉常溫</option>
+                    </select>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;font-size:13px;" id="issueLocRow">
+                    <span style="width:72px;color:#555;flex-shrink:0;">🍕 備料至</span>
+                    <select id="editIssueLoc" class="action-loc-select">
+                        <option value="onsiteChilled">解凍冷藏</option>
+                        <option value="prep">其他備貨</option>
+                    </select>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;font-size:13px;">
+                    <span style="width:72px;color:#555;flex-shrink:0;">📤 消耗從</span>
+                    <select id="editConsumeLoc" class="action-loc-select">
+                        <option value="onsiteChilled">解凍冷藏</option>
+                        <option value="prep">其他備貨</option>
+                    </select>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;font-size:13px;">
+                    <span style="width:72px;color:#555;flex-shrink:0;">↩️ 回放至</span>
+                    <select id="editReturnLoc" class="action-loc-select">
+                        <option value="warehouseFrozen">大倉冷凍</option>
+                        <option value="warehouseChilled">大倉冷藏</option>
+                        <option value="warehouseRoom">大倉常溫</option>
+                    </select>
+                </div>
+            </div>
         </div>
 
         <div class="form-row">
@@ -561,37 +594,46 @@
         document.getElementById('enableThaw').checked       = item?.enableThaw === true;
         document.getElementById('enableReturn').checked     = item?.enableReturn === true;
 
+        const stType = item?.storageType ?? '冷凍';
+        const preset = STORAGE_PRESETS[stType] || STORAGE_PRESETS['冷凍'];
+        document.getElementById('editReceiveLoc').value = item?.defaultReceiveLocation ?? preset.receive;
+        document.getElementById('editIssueLoc').value   = item?.defaultIssueLocation   ?? (item?.enableThaw ? 'onsiteChilled' : preset.receive);
+        document.getElementById('editConsumeLoc').value = item?.defaultConsumeLocation ?? 'prep';
+        document.getElementById('editReturnLoc').value  = item?.defaultReturnLocation  ?? preset.receive;
+
         refreshThawVisibility();
-        refreshAllowedDisplay();
         document.getElementById('itemModal').classList.add('open');
     };
 
     window.onStorageTypeChange = function() {
+        const storageType = document.getElementById('editStorageType').value;
+        const preset = STORAGE_PRESETS[storageType] || STORAGE_PRESETS['冷凍'];
+        document.getElementById('editReceiveLoc').value = preset.receive;
+        document.getElementById('editIssueLoc').value   = storageType === '冷凍' ? 'onsiteChilled' : 'prep';
+        document.getElementById('editReturnLoc').value  = preset.receive;
         refreshThawVisibility();
-        refreshAllowedDisplay();
+    };
+
+    window.onEnableThawChange = function() {
+        refreshThawVisibility();
     };
 
     function refreshThawVisibility() {
         const storageType = document.getElementById('editStorageType').value;
-        const wrap = document.getElementById('enableThawWrap');
+        const enableThaw  = document.getElementById('enableThaw').checked;
+        const wrap        = document.getElementById('enableThawWrap');
+        const issueRow    = document.getElementById('issueLocRow');
         if (storageType !== '冷凍') {
             document.getElementById('enableThaw').checked = false;
             wrap.style.opacity = '0.4';
             wrap.style.pointerEvents = 'none';
+            issueRow.style.display = 'none';
         } else {
             wrap.style.opacity = '';
             wrap.style.pointerEvents = '';
+            issueRow.style.display = enableThaw ? '' : 'none';
         }
     }
-
-    window.refreshAllowedDisplay = function() {
-        const storageType    = document.getElementById('editStorageType').value;
-        const enableThaw     = document.getElementById('enableThaw').checked;
-        const primaryStation = document.getElementById('editPrimaryStation').value;
-        const allowed = computeAllowedLocations(storageType, enableThaw, primaryStation);
-        const labels = allowed.map(k => `<span style="display:inline-block;background:#e8f5e9;color:#2e7d32;border-radius:20px;padding:2px 10px;margin:2px;">${LOCATION_DEFS[k]?.name || k}</span>`);
-        document.getElementById('allowedDisplay').innerHTML = labels.join(' ');
-    };
 
     window.closeItemModal = function() {
         document.getElementById('itemModal').classList.remove('open');
@@ -608,11 +650,17 @@
         const thresholdDisp  = nn(document.getElementById('editThreshold').value, 0);
         const sortOrder      = nn(document.getElementById('editSortOrder').value, inventoryData.length + 1);
         const active         = document.getElementById('editActive').value === 'true';
-        const enableThaw     = document.getElementById('enableThaw').checked;
-        const enableReturn   = document.getElementById('enableReturn').checked;
-        const primaryStation = document.getElementById('editPrimaryStation').value;
-        const preset         = STORAGE_PRESETS[storageType] || STORAGE_PRESETS['冷凍'];
-        const allowedLocations = computeAllowedLocations(storageType, enableThaw, primaryStation);
+        const enableThaw        = document.getElementById('enableThaw').checked;
+        const enableReturn      = document.getElementById('enableReturn').checked;
+        const primaryStation    = document.getElementById('editPrimaryStation').value;
+        const defaultReceiveLoc = document.getElementById('editReceiveLoc').value;
+        const defaultIssueLoc   = document.getElementById('editIssueLoc').value;
+        const defaultConsumeLoc = document.getElementById('editConsumeLoc').value;
+        const defaultReturnLoc  = document.getElementById('editReturnLoc').value;
+
+        const seen = new Set();
+        const allowedLocations = [defaultReceiveLoc, ...(enableThaw ? [defaultIssueLoc] : []), defaultConsumeLoc, primaryStation]
+            .filter(k => { if (seen.has(k)) return false; seen.add(k); return true; });
 
         if (!name || !category || !displayUnit || !baseUnit) {
             alert('請完整填寫名稱、分類、顯示單位、基準單位'); return;
@@ -624,10 +672,10 @@
             thresholdDisplay: thresholdDisp,
             thresholdBase: thresholdDisp * basePerDisplay,
             enableThaw, enableReturn, primaryStation,
-            defaultReceiveLocation: preset.receive,
-            defaultIssueLocation:   enableThaw ? 'onsiteChilled' : preset.receive,
-            defaultConsumeLocation: 'prep',
-            defaultReturnLocation:  preset.receive,
+            defaultReceiveLocation:  defaultReceiveLoc,
+            defaultIssueLocation:    enableThaw ? defaultIssueLoc : defaultReceiveLoc,
+            defaultConsumeLocation:  defaultConsumeLoc,
+            defaultReturnLocation:   defaultReturnLoc,
             allowedLocations, sortOrder, active
         };
 
