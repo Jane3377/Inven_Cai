@@ -555,25 +555,14 @@
                 const snap = await tx.get(mainRef);
                 const data = snap.exists() ? snap.data() : { items: [] };
                 const items = (data.items || []).map(normalizeItem);
-                const pendingLogs = [];
-                if (mutate(items, pendingLogs) === false) return;
+                if (mutate(items) === false) return;
                 const { logs: _old, ...restData } = data;
                 tx.set(mainRef, { ...restData, items, lastUpdated: new Date().toISOString() });
-                pendingLogs.forEach(logData => tx.set(doc(logsRef), logData));
             });
             showToast("✅ 已儲存");
         } catch (e) {
             alert("寫入失敗，請再試一次：" + e.message);
         }
-    }
-
-    function pushLog(pendingLogs, text) {
-        const now = new Date();
-        pendingLogs.push({
-            ts: now.getTime(),
-            time: now.toLocaleString('zh-TW', { hour12: false }),
-            text
-        });
     }
 
     // ── PIN ──────────────────────────────────────────────
@@ -860,14 +849,12 @@
             }
         }
 
-        runItemTransaction((items, txLogs) => {
+        runItemTransaction(items => {
             const idx = items.findIndex(i => String(i.id) === String(patch.id));
             if (idx >= 0) {
                 items[idx] = normalizeItem({ ...items[idx], ...patch }, idx);
-                pushLog(txLogs, `⚙️ 後台：編輯品項「${name}」`);
             } else {
                 items.push(normalizeItem({ ...patch, locations: {} }, items.length));
-                pushLog(txLogs, `⚙️ 後台：新增品項「${name}」`);
             }
         }).then(() => closeItemModal());
     };
@@ -877,11 +864,10 @@
         if (!item) return;
         const next = item.active === false;
         if (!confirm(`${next ? '啟用' : '停用'}「${item.name}」？`)) return;
-        runItemTransaction((items, txLogs) => {
+        runItemTransaction(items => {
             const it = items.find(i => String(i.id) === String(itemId));
             if (!it) return false;
             it.active = next;
-            pushLog(txLogs, `⚙️ 後台：${next ? '啟用' : '停用'}品項「${it.name}」`);
         });
     };
 
@@ -893,14 +879,12 @@
             ? `\n\n⚠️ 此品項仍有庫存 ${parseFloat((stock / (item.basePerDisplay || 1)).toFixed(3))} ${item.displayUnit}，刪除後資料無法復原。`
             : '';
         if (!confirm(`確定永久刪除「${item.name}」？${stockWarn}\n此操作無法復原。`)) return;
-        runItemTransaction((items, txLogs) => {
+        runItemTransaction(items => {
             const idx = items.findIndex(i => String(i.id) === String(itemId));
             if (idx === -1) return false;
-            const name = items[idx].name;
             items.splice(idx, 1);
             items.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
             items.forEach((it, i) => { it.sortOrder = i + 1; });
-            pushLog(txLogs, `🗑️ 後台：永久刪除品項「${name}」`);
         });
     };
 
