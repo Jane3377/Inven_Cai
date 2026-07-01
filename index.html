@@ -418,82 +418,6 @@ const firebaseConfig = {
     });
     const docRef = doc(db, "inventory", "mainStore");
 
-    const LEGACY_DEFAULT_DATA = [
-        { id: 1, category: "肉類", name: "豬絞肉 (熟/800g包)", freezerStock: 10, chillerStock: 2, threshold: 5, unit: "包" },
-        { id: 80, category: "肉類", name: "豬絞肉 (生/800g包)", freezerStock: 10, chillerStock: 2, threshold: 5, unit: "包" },
-        { id: 2, category: "肉類", name: "牛絞肉 (熟/800g包)", freezerStock: 4, chillerStock: 1, threshold: 5, unit: "包" },
-        { id: 81, category: "肉類", name: "牛絞肉 (生/800g包)", freezerStock: 4, chillerStock: 1, threshold: 5, unit: "包" },
-        { id: 3, category: "海鮮", name: "蝦仁 (熟/800g包)", freezerStock: 8, chillerStock: 3, threshold: 4, unit: "包" },
-        { id: 82, category: "海鮮", name: "蝦仁 (生/800g包)", freezerStock: 8, chillerStock: 3, threshold: 4, unit: "包" },
-        { id: 4, category: "海鮮", name: "透抽 (熟/800g包)", freezerStock: 2, chillerStock: 1, threshold: 3, unit: "包" },
-        { id: 83, category: "海鮮", name: "透抽 (生/800g包)", freezerStock: 2, chillerStock: 1, threshold: 3, unit: "包" },
-        { id: 5, category: "海鮮", name: "珠貝 (熟/500g包)", freezerStock: 6, chillerStock: 2, threshold: 3, unit: "包" },
-        { id: 84, category: "海鮮", name: "珠貝 (生/500g包)", freezerStock: 6, chillerStock: 2, threshold: 3, unit: "包" },
-        { id: 60, category: "海鮮", name: "蟹味棒", freezerStock: 5, chillerStock: 2, threshold: 3, unit: "包" },
-        { id: 6, category: "臘腸", name: "大臘腸", freezerStock: 15, chillerStock: 4, threshold: 6, unit: "包" },
-        { id: 7, category: "臘腸", name: "小臘腸", freezerStock: 5, chillerStock: 2, threshold: 4, unit: "袋" },
-        { id: 61, category: "臘腸", name: "火腿", freezerStock: 6, chillerStock: 2, threshold: 4, unit: "包" },
-        { id: 8, category: "薯條起司", name: "薯條", freezerStock: 3, chillerStock: 1, threshold: 5, unit: "袋" },
-        { id: 9, category: "薯條起司", name: "莫扎瑞拉", freezerStock: 8, chillerStock: 2, threshold: 4, unit: "包" },
-        { id: 62, category: "薯條起司", name: "起司", freezerStock: 8, chillerStock: 2, threshold: 4, unit: "包" },
-        { id: 10, category: "蔬菜", name: "番茄", freezerStock: 20, chillerStock: 5, threshold: 15, unit: "顆" },
-        { id: 11, category: "蔬菜", name: "洋蔥", freezerStock: 15, chillerStock: 4, threshold: 10, unit: "顆" },
-        { id: 12, category: "蔬菜", name: "青椒", freezerStock: 5, chillerStock: 2, threshold: 6, unit: "條" },
-        { id: 13, category: "蔬菜", name: "九層塔", freezerStock: 10, chillerStock: 2, threshold: 5, unit: "兩" },
-        { id: 14, category: "罐頭類", name: "鳳梨", freezerStock: 12, chillerStock: 2, threshold: 5, unit: "罐" },
-        { id: 15, category: "罐頭類", name: "玉米", freezerStock: 12, chillerStock: 2, threshold: 5, unit: "罐" },
-        { id: 16, category: "罐頭類", name: "洋菇", freezerStock: 12, chillerStock: 2, threshold: 5, unit: "罐" },
-        { id: 17, category: "罐頭類", name: "黑橄欖", freezerStock: 12, chillerStock: 2, threshold: 5, unit: "罐" },
-        { id: 70, category: "飲料", name: "茶葉", freezerStock: 10, chillerStock: 2, threshold: 3, unit: "包" },
-        { id: 71, category: "飲料", name: "小美冰淇淋", freezerStock: 10, chillerStock: 2, threshold: 3, unit: "桶" },
-        { id: 72, category: "飲料", name: "K冰淇淋", freezerStock: 10, chillerStock: 2, threshold: 3, unit: "盒" },
-        { id: 73, category: "飲料", name: "冷凍草莓", freezerStock: 10, chillerStock: 2, threshold: 3, unit: "包" },
-        { id: 74, category: "飲料", name: "可可粉", freezerStock: 10, chillerStock: 2, threshold: 3, unit: "包" },
-        { id: 75, category: "飲料", name: "鮮奶", freezerStock: 10, chillerStock: 2, threshold: 3, unit: "瓶" },
-        { id: 18, category: "粉", name: "鬆厚預拌粉", freezerStock: 10, chillerStock: 2, threshold: 5, unit: "包" },
-        { id: 19, category: "粉", name: "薄脆預拌粉", freezerStock: 10, chillerStock: 2, threshold: 5, unit: "包" },
-        { id: 20, category: "粉", name: "比薩香料粉", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "包" },
-        { id: 21, category: "粉", name: "義式香腸粉", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "包" },
-        { id: 22, category: "粉", name: "雞肉醃漬粉", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "包" },
-        { id: 23, category: "粉", name: "雞肉裹粉P100", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "包" },
-        { id: 24, category: "粉", name: "雞肉裹粉Q50", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "包" },
-        { id: 25, category: "粉", name: "雞肉裹粉R0", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "包" },
-        { id: 26, category: "醬料", name: "番茄醬 (袋裝)", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "袋" },
-        { id: 27, category: "醬料", name: "番茄醬 (瓶裝)", freezerStock: 10, chillerStock: 2, threshold: 5, unit: "瓶" },
-        { id: 28, category: "醬料", name: "Tabasco", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "瓶" },
-        { id: 29, category: "醬料", name: "BB辣椒醬", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "瓶" },
-        { id: 30, category: "外帶醬料", name: "外帶番茄醬", freezerStock: 50, chillerStock: 10, threshold: 20, unit: "袋" },
-        { id: 31, category: "外帶醬料", name: "外帶黑胡椒", freezerStock: 50, chillerStock: 10, threshold: 20, unit: "袋" },
-        { id: 32, category: "外帶醬料", name: "外帶乾辣椒", freezerStock: 50, chillerStock: 10, threshold: 20, unit: "袋" },
-        { id: 33, category: "外帶醬料", name: "外帶辣椒粉", freezerStock: 50, chillerStock: 10, threshold: 20, unit: "袋" },
-        { id: 34, category: "包材", name: "12吋比薩盒", freezerStock: 20, chillerStock: 5, threshold: 10, unit: "包" },
-        { id: 35, category: "包材", name: "9吋比薩盒", freezerStock: 20, chillerStock: 5, threshold: 10, unit: "包" },
-        { id: 36, category: "包材", name: "比薩紙", freezerStock: 15, chillerStock: 3, threshold: 5, unit: "包" },
-        { id: 37, category: "包材", name: "大炸雞盒", freezerStock: 10, chillerStock: 2, threshold: 3, unit: "箱" },
-        { id: 38, category: "包材", name: "小炸雞盒", freezerStock: 10, chillerStock: 2, threshold: 3, unit: "箱" },
-        { id: 39, category: "包材", name: "吸油紙", freezerStock: 15, chillerStock: 3, threshold: 5, unit: "包" },
-        { id: 40, category: "包材", name: "冷飲杯+蓋", freezerStock: 30, chillerStock: 5, threshold: 10, unit: "條" },
-        { id: 41, category: "包材", name: "熱飲杯+蓋", freezerStock: 30, chillerStock: 5, threshold: 10, unit: "條" },
-        { id: 42, category: "包材", name: "大背心提袋", freezerStock: 20, chillerStock: 5, threshold: 5, unit: "包" },
-        { id: 43, category: "包材", name: "中背心提袋", freezerStock: 20, chillerStock: 5, threshold: 5, unit: "包" },
-        { id: 44, category: "包材", name: "小背心提袋", freezerStock: 20, chillerStock: 5, threshold: 5, unit: "包" },
-        { id: 45, category: "包材", name: "2杯架", freezerStock: 10, chillerStock: 2, threshold: 3, unit: "包" },
-        { id: 46, category: "包材", name: "4杯架", freezerStock: 10, chillerStock: 2, threshold: 3, unit: "包" },
-        { id: 47, category: "衛生用品", name: "廚房紙巾", freezerStock: 10, chillerStock: 2, threshold: 3, unit: "袋" },
-        { id: 48, category: "衛生用品", name: "烘培紙", freezerStock: 8, chillerStock: 2, threshold: 3, unit: "條" },
-        { id: 49, category: "衛生用品", name: "桌上衛生紙", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "箱" },
-        { id: 50, category: "衛生用品", name: "折疊紙巾", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "箱" },
-        { id: 51, category: "衛生用品", name: "捲筒衛生紙", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "箱" },
-        { id: 52, category: "衛生用品", name: "濕紙巾", freezerStock: 5, chillerStock: 1, threshold: 2, unit: "箱" },
-        { id: 53, category: "衛生用品", name: "廚房手套S", freezerStock: 6, chillerStock: 2, threshold: 2, unit: "盒" },
-        { id: 54, category: "衛生用品", name: "廚房手套", freezerStock: 6, chillerStock: 2, threshold: 2, unit: "盒" },
-        { id: 55, category: "衛生用品", name: "一次性手套", freezerStock: 10, chillerStock: 2, threshold: 3, unit: "袋" },
-        { id: 56, category: "清潔用品", name: "地板清潔劑", freezerStock: 3, chillerStock: 1, threshold: 1, unit: "桶" },
-        { id: 57, category: "清潔用品", name: "洗碗精", freezerStock: 4, chillerStock: 1, threshold: 1, unit: "桶" },
-        { id: 58, category: "清潔用品", name: "洗手乳", freezerStock: 4, chillerStock: 1, threshold: 1, unit: "桶" },
-        { id: 59, category: "清潔用品", name: "洗手液", freezerStock: 4, chillerStock: 1, threshold: 1, unit: "桶" }
-    ];
-
     const SCHEMA_VERSION = 2;
     const WAREHOUSE_KEYS = ["warehouseFrozen", "warehouseChilled", "warehouseRoom"];
     const PREP_KEYS      = ["onsiteChilled", "prep"];
@@ -594,32 +518,13 @@ const firebaseConfig = {
         Object.keys(LOCATION_DEFS).forEach(key => {
             item.locations[key] = normalizeNumber(item.locations[key], 0);
         });
-        item.locations.onsiteRoom = 0; // 舊欄位廢棄，歸零
-        if (!raw.locations) {
-            const freezerBase = normalizeNumber(raw.freezerStock, 0) * item.basePerDisplay;
-            const chillerBase = normalizeNumber(raw.chillerStock, 0) * item.basePerDisplay;
-            item.locations[item.defaultReceiveLocation] = normalizeNumber(item.locations[item.defaultReceiveLocation], 0) + freezerBase;
-            item.locations[item.defaultIssueLocation] = normalizeNumber(item.locations[item.defaultIssueLocation], 0) + chillerBase;
-        }
-        const thresholdDisplay = raw.thresholdDisplay ?? raw.threshold ?? 0;
-        item.thresholdDisplay = normalizeNumber(thresholdDisplay, 0);
+        item.thresholdDisplay = normalizeNumber(raw.thresholdDisplay ?? raw.threshold ?? 0, 0);
         item.thresholdBase = normalizeNumber(item.thresholdBase, item.thresholdDisplay * item.basePerDisplay);
-        item.threshold = item.thresholdDisplay; // 舊版相容欄位
-        updateLegacyStockFields(item);
         return item;
     }
 
     function normalizeItems(items) {
         return (items || []).map(normalizeItem).sort((a,b) => (a.sortOrder - b.sortOrder) || String(a.name).localeCompare(String(b.name), "zh-Hant"));
-    }
-
-    function updateLegacyStockFields(item) {
-        const warehouseBase = sumLocations(item, WAREHOUSE_KEYS);
-        const prepBase = sumLocations(item, PREP_KEYS);
-        item.freezerStock = toDisplayQty(item, warehouseBase);
-        item.chillerStock = toDisplayQty(item, prepBase);
-        item.unit = item.displayUnit;
-        return item;
     }
 
     function sumLocations(item, keys) {
@@ -689,25 +594,11 @@ const firebaseConfig = {
         if (docSnap.exists()) {
             const data = docSnap.data();
             settings = { categories: [], locations: Object.values(LOCATION_DEFS), ...(data.settings || {}) };
-            const cloudItems = normalizeItems(data.items || []);
-            const existingIds = new Set(cloudItems.map(i => i.id));
-            const missingItems = LEGACY_DEFAULT_DATA.filter(def => !existingIds.has(def.id)).map((def, idx) => normalizeItem(def, cloudItems.length + idx));
-            inventoryData = normalizeItems([...cloudItems, ...missingItems]);
+            inventoryData = normalizeItems(data.items || []);
             logs = Array.isArray(data.logs) ? data.logs : [];
-            if (missingItems.length > 0 && !meta.fromCache && !meta.hasPendingWrites) {
-                runStockTransaction((items) => {
-                    const normalized = normalizeItems(items);
-                    const ids = new Set(normalized.map(i => i.id));
-                    const toAdd = LEGACY_DEFAULT_DATA.filter(def => !ids.has(def.id)).map((def, idx) => normalizeItem(def, normalized.length + idx));
-                    if (!toAdd.length) return false;
-                    items.length = 0;
-                    normalizeItems([...normalized, ...toAdd]).forEach(i => items.push(i));
-                }, { silent: true });
-            }
         } else {
-            inventoryData = normalizeItems(LEGACY_DEFAULT_DATA);
-            settings = { categories: getAllCategories().filter(c => c !== "全部"), locations: Object.values(LOCATION_DEFS) };
-            saveWholeDocument();
+            inventoryData = [];
+            settings = { categories: [], locations: Object.values(LOCATION_DEFS) };
         }
         renderAll();
     }, (error) => {
@@ -720,7 +611,7 @@ const firebaseConfig = {
     });
 
     function saveWholeDocument() {
-        const items = normalizeItems(inventoryData).map(updateLegacyStockFields);
+        const items = normalizeItems(inventoryData);
         setDoc(docRef, {
             schemaVersion: SCHEMA_VERSION,
             items,
@@ -736,12 +627,11 @@ const firebaseConfig = {
             await runTransaction(db, async (tx) => {
                 const snap = await tx.get(docRef);
                 const data = snap.exists() ? snap.data() : { items: [], logs: [], settings: {} };
-                const items = normalizeItems(data.items && data.items.length ? data.items : LEGACY_DEFAULT_DATA);
+                const items = normalizeItems(data.items || []);
                 let txLogs = Array.isArray(data.logs) ? [...data.logs] : [];
                 const txSettings = { categories: [], locations: Object.values(LOCATION_DEFS), ...(data.settings || {}) };
                 const result = mutate(items, txLogs, txSettings);
                 if (result === false) return;
-                items.forEach(updateLegacyStockFields);
                 if (txLogs.length > 100) txLogs = txLogs.slice(0, 100);
                 tx.set(docRef, {
                     schemaVersion: SCHEMA_VERSION,
