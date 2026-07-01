@@ -435,6 +435,37 @@ const firebaseConfig = {
             count_title: '📋 庫存盤點', count_sub: '輸入各倉位實際數量（顯示單位），確認後寫入系統',
             full_count_btn: '全品項盤點', lock_btn: '🔒 鎖定',
             cancel_btn: '取消', finish_btn: '✓ 完成盤點',
+            cat_all: '全部',
+            badge_off: '停用', badge_low: '⚠️ 補貨', badge_ok: '✅ 充足',
+            badge_low_s: '補貨', badge_ok_s: '充足', safety: '安全線',
+            btn_receive: '入庫', btn_prep: '備料', btn_consume: '消耗', btn_return: '回放',
+            btn_receive_c: '📦 入庫', btn_prep_c: '🍕 備料', btn_consume_c: '📤 消耗', btn_return_c: '↩️ 回放',
+            btn_info: '說明', to_exit: '出庫',
+            no_items: '沒有符合條件的品項', no_count_items: '沒有可盤點的品項',
+            no_log_7d: '近 7 天無操作記錄', no_log: '暫無紀錄', loading_log: '載入中…',
+            log_more: '查看更多（已顯示 {shown} / 共 {total} 筆）',
+            detail_open: '明細', detail_close: '收合',
+            detail_expand: '▼ 展開明細', detail_collapse: '▲ 收合明細',
+            last_count: '上次全品項盤點：', no_last_count: '（尚無完整盤點紀錄）',
+            full_progress: '已確認 {done} / {total} 項',
+            full_incomplete: '還有 {n} 項尚未確認，請繼續完成後再結束盤點。',
+            full_done: '✅ 全品項盤點完成！',
+            count_confirm_btn: '✓ 確認', count_current: '現：',
+            panel_receive_lbl: '入庫至', panel_prep_lbl: '備料',
+            panel_consume_lbl: '消耗', panel_return_lbl: '回放',
+            panel_qty: '數量', panel_note_ph: '備註（選填）',
+            panel_ok_receive: '✅ 確認入庫', panel_ok_prep: '🍕 確認備料',
+            panel_ok_consume: '📤 確認消耗', panel_ok_return: '↩️ 確認回放',
+            return_warn: '⚠️ 僅限完整包裝、未開封且符合保存條件的品項',
+            confirm_return: '請確認此品項為完整包裝、未開封，且仍符合保存條件。\n已開封或分裝後的剩餘量不可回放。',
+            item_not_found: '找不到此品項，請重新整理。', enter_qty: '請輸入大於 0 的數量。',
+            stock_short: '{loc} 存量不足。',
+            offline_alert: '⚠️ 目前與雲端連線失敗，無法編輯。\n請確認網路後重試，以免庫存沒有真正寫入。',
+            confirm_clear: '確定要清除所有紀錄嗎？所有連線設備都會同步清除。',
+            toast_synced: '已寫入並同步庫存', toast_no_change: '數量無變動，未寫入',
+            toast_cleared: '✅ 紀錄已清除', toast_no_logs: '沒有紀錄可清除',
+            toast_pwa: '可使用瀏覽器分享選單加入主畫面',
+            tx_error: '操作未完成（可能因其他裝置同時操作），請再試一次：',
         },
         vi: {
             tab_stock: 'Kho hàng', tab_count: '📋 Kiểm kê',
@@ -450,6 +481,37 @@ const firebaseConfig = {
             count_title: '📋 Kiểm kê kho', count_sub: 'Nhập số lượng thực tế từng khu vực, xác nhận để ghi vào hệ thống',
             full_count_btn: 'Kiểm kê toàn bộ', lock_btn: '🔒 Khóa',
             cancel_btn: 'Hủy', finish_btn: '✓ Hoàn thành kiểm kê',
+            cat_all: 'Tất cả',
+            badge_off: 'Ngưng dùng', badge_low: '⚠️ Bổ sung', badge_ok: '✅ Đủ hàng',
+            badge_low_s: 'Bổ sung', badge_ok_s: 'Đủ hàng', safety: 'Mức an toàn',
+            btn_receive: 'Nhập kho', btn_prep: 'Sơ chế', btn_consume: 'Xuất dùng', btn_return: 'Hoàn trả',
+            btn_receive_c: '📦 Nhập kho', btn_prep_c: '🍕 Sơ chế', btn_consume_c: '📤 Xuất dùng', btn_return_c: '↩️ Hoàn trả',
+            btn_info: 'Mô tả', to_exit: 'Ra ngoài',
+            no_items: 'Không có mặt hàng phù hợp', no_count_items: 'Không có mặt hàng để kiểm kê',
+            no_log_7d: 'Không có thao tác trong 7 ngày qua', no_log: 'Chưa có nhật ký', loading_log: 'Đang tải…',
+            log_more: 'Xem thêm (đã hiển thị {shown} / tổng {total})',
+            detail_open: 'Chi tiết', detail_close: 'Thu gọn',
+            detail_expand: '▼ Xem chi tiết', detail_collapse: '▲ Thu gọn',
+            last_count: 'Kiểm kê toàn bộ lần cuối：', no_last_count: '（Chưa có lần kiểm kê hoàn chỉnh）',
+            full_progress: 'Đã xác nhận {done} / {total} mặt hàng',
+            full_incomplete: 'Còn {n} mặt hàng chưa xác nhận, hãy hoàn thành trước khi kết thúc.',
+            full_done: '✅ Đã hoàn thành kiểm kê toàn bộ!',
+            count_confirm_btn: '✓ Xác nhận', count_current: 'Hiện：',
+            panel_receive_lbl: 'Nhập vào', panel_prep_lbl: 'Sơ chế',
+            panel_consume_lbl: 'Xuất dùng', panel_return_lbl: 'Hoàn trả',
+            panel_qty: 'Số lượng', panel_note_ph: 'Ghi chú (tùy chọn)',
+            panel_ok_receive: '✅ Xác nhận nhập kho', panel_ok_prep: '🍕 Xác nhận sơ chế',
+            panel_ok_consume: '📤 Xác nhận xuất dùng', panel_ok_return: '↩️ Xác nhận hoàn trả',
+            return_warn: '⚠️ Chỉ áp dụng cho hàng còn nguyên bao bì, chưa mở và đạt điều kiện bảo quản',
+            confirm_return: 'Xác nhận mặt hàng còn nguyên bao bì, chưa mở và đạt điều kiện bảo quản.\nHàng đã mở hoặc chia nhỏ không được hoàn trả.',
+            item_not_found: 'Không tìm thấy mặt hàng, vui lòng tải lại trang.', enter_qty: 'Vui lòng nhập số lượng lớn hơn 0.',
+            stock_short: '{loc} không đủ hàng.',
+            offline_alert: '⚠️ Mất kết nối với máy chủ, không thể chỉnh sửa.\nVui lòng kiểm tra mạng và thử lại.',
+            confirm_clear: 'Xóa toàn bộ nhật ký? Tất cả thiết bị kết nối sẽ đồng bộ xóa.',
+            toast_synced: 'Đã ghi và đồng bộ kho hàng', toast_no_change: 'Số lượng không thay đổi, không ghi',
+            toast_cleared: '✅ Đã xóa nhật ký', toast_no_logs: 'Không có nhật ký để xóa',
+            toast_pwa: 'Dùng menu chia sẻ của trình duyệt để thêm màn hình chính',
+            tx_error: 'Thao tác chưa hoàn thành (có thể do thiết bị khác đồng thời), vui lòng thử lại：',
         }
     };
     let currentLang = localStorage.getItem('inventoryLang') || 'zh';
@@ -518,7 +580,7 @@ const firebaseConfig = {
 
     function guardOnline() {
         if (isOffline) {
-            alert("⚠️ 目前與雲端連線失敗，無法編輯。\n請確認網路後重試，以免庫存沒有真正寫入。");
+            alert(t('offline_alert'));
             return false;
         }
         return true;
@@ -710,9 +772,9 @@ const firebaseConfig = {
                 });
                 pendingLogs.forEach(logData => tx.set(doc(logsRef), logData));
             });
-            if (!options.silent) showToast("已寫入並同步庫存");
+            if (!options.silent) showToast(t('toast_synced'));
         } catch (error) {
-            alert("操作未完成（可能因其他裝置同時操作），請再試一次：" + error.message);
+            alert(t('tx_error') + error.message);
         }
     }
 
@@ -748,7 +810,10 @@ const firebaseConfig = {
         if (!wrap) return;
         const cats = getAllCategories();
         if (!cats.includes(currentCategoryFilter)) currentCategoryFilter = "全部";
-        wrap.innerHTML = cats.map(cat => `<button class="filter-btn ${cat === currentCategoryFilter ? "active" : ""}" type="button" onclick="filterCategory('${escapeHtml(cat)}')">${escapeHtml(cat)}</button>`).join("");
+        wrap.innerHTML = cats.map(cat => {
+            const display = cat === '全部' ? t('cat_all') : escapeHtml(cat);
+            return `<button class="filter-btn ${cat === currentCategoryFilter ? "active" : ""}" type="button" onclick="filterCategory('${escapeHtml(cat)}')">${display}</button>`;
+        }).join("");
         const datalist = document.getElementById("categoryList");
         if (datalist) datalist.innerHTML = cats.filter(c => c !== "全部").map(c => `<option value="${escapeHtml(c)}"></option>`).join("");
     }
@@ -771,8 +836,8 @@ const firebaseConfig = {
             alertBox.style.display = "none";
         }
         if (!items.length) {
-            tbody.innerHTML = `<tr><td colspan="8" class="loading-text">沒有符合條件的品項</td></tr>`;
-            mobile.innerHTML = `<div class="loading-text">沒有符合條件的品項</div>`;
+            tbody.innerHTML = `<tr><td colspan="8" class="loading-text">${t('no_items')}</td></tr>`;
+            mobile.innerHTML = `<div class="loading-text">${t('no_items')}</div>`;
             renderLogs();
             return;
         }
@@ -823,10 +888,10 @@ const firebaseConfig = {
         const consumeFrom = LOCATION_DEFS[item.defaultConsumeLocation]?.short || item.defaultConsumeLocation;
         const retLoc      = LOCATION_DEFS[item.defaultReturnLocation]?.short  || item.defaultReturnLocation || receiveLoc;
         const infoLines = [
-            `入庫 → ${receiveLoc}`,
-            ...(item.enableThaw ? [`備料 ${receiveLoc} → ${issueLoc}`] : []),
-            `消耗 ${consumeFrom} → 出庫`,
-            ...(item.enableReturn ? [`回放 ${consumeFrom} → ${retLoc}`] : []),
+            `${t('btn_receive')} → ${receiveLoc}`,
+            ...(item.enableThaw ? [`${t('btn_prep')} ${receiveLoc} → ${issueLoc}`] : []),
+            `${t('btn_consume')} ${consumeFrom} → ${t('to_exit')}`,
+            ...(item.enableReturn ? [`${t('btn_return')} ${consumeFrom} → ${retLoc}`] : []),
         ];
         return `
             <tr class="${isLow ? "low-stock" : ""} ${item.active === false ? "inactive-row" : ""}">
@@ -835,10 +900,10 @@ const firebaseConfig = {
                 <td>${renderLocationStack(item, WAREHOUSE_KEYS)}</td>
                 <td>${item.enableThaw ? renderSingleLocationCell(item, item.defaultIssueLocation) : '<div class="stock-stack" style="color:#ccc;font-size:12px;">—</div>'}</td>
                 <td>${item.active === false
-                    ? '<span class="badge badge-off">停用</span>'
+                    ? `<span class="badge badge-off">${t('badge_off')}</span>`
                     : isLow
-                        ? `<span class="badge badge-low">⚠️ 補貨</span><div style="font-size:11px;color:#9aaba3;margin-top:3px;">安全線 ${formatQty(item, item.thresholdBase, { compact: true })}</div>`
-                        : `<span class="badge badge-ok">✅ 充足</span><div style="font-size:11px;color:#9aaba3;margin-top:3px;">安全線 ${formatQty(item, item.thresholdBase, { compact: true })}</div>`}
+                        ? `<span class="badge badge-low">${t('badge_low')}</span><div style="font-size:11px;color:#9aaba3;margin-top:3px;">${t('safety')} ${formatQty(item, item.thresholdBase, { compact: true })}</div>`
+                        : `<span class="badge badge-ok">${t('badge_ok')}</span><div style="font-size:11px;color:#9aaba3;margin-top:3px;">${t('safety')} ${formatQty(item, item.thresholdBase, { compact: true })}</div>`}
                 </td>
                 <td>
                     <div class="qact-input-wrap">
@@ -848,19 +913,19 @@ const firebaseConfig = {
                 </td>
                 <td class="qact-td">
                     <div class="qact-btns">
-                        <button class="qact-btn qact-receive" type="button" ${dis} onclick="execQuickAction(${item.id},'receive')">入庫</button>
-                        ${item.enableThaw ? `<button class="qact-btn qact-prep" type="button" ${dis} onclick="execQuickAction(${item.id},'prep')">備料</button>` : ""}
-                        <button class="qact-btn qact-consume" type="button" ${dis} onclick="execQuickAction(${item.id},'consume')">消耗</button>
-                        ${item.enableReturn ? `<button class="qact-btn qact-return" type="button" ${dis} onclick="execQuickAction(${item.id},'return')">回放</button>` : ""}
+                        <button class="qact-btn qact-receive" type="button" ${dis} onclick="execQuickAction(${item.id},'receive')">${t('btn_receive')}</button>
+                        ${item.enableThaw ? `<button class="qact-btn qact-prep" type="button" ${dis} onclick="execQuickAction(${item.id},'prep')">${t('btn_prep')}</button>` : ""}
+                        <button class="qact-btn qact-consume" type="button" ${dis} onclick="execQuickAction(${item.id},'consume')">${t('btn_consume')}</button>
+                        ${item.enableReturn ? `<button class="qact-btn qact-return" type="button" ${dis} onclick="execQuickAction(${item.id},'return')">${t('btn_return')}</button>` : ""}
                     </div>
                 </td>
                 <td>
                     <div class="info-cell-btns">
                         <div style="position:relative;">
-                            <button class="qact-info" type="button" onclick="toggleInfoPop(event,${item.id})">說明</button>
+                            <button class="qact-info" type="button" onclick="toggleInfoPop(event,${item.id})">${t('btn_info')}</button>
                             <div class="info-pop hidden" id="info-pop-${item.id}">${infoLines.map(l => escapeHtml(l)).join("<br>")}${item.notes ? `<div class="info-notes">${escapeHtml(item.notes)}</div>` : ""}</div>
                         </div>
-                        <button class="qact-log-toggle" id="log-toggle-table-${item.id}" type="button" onclick="toggleItemLog(${item.id})">明細</button>
+                        <button class="qact-log-toggle" id="log-toggle-table-${item.id}" type="button" onclick="toggleItemLog(${item.id})">${t('detail_open')}</button>
                     </div>
                 </td>
             </tr>
@@ -894,18 +959,18 @@ const firebaseConfig = {
             <article class="item-card ${item.active === false ? "inactive-row" : ""}">
                 <div class="card-head">
                     <div><div class="card-title">${escapeHtml(item.name)}</div><div class="card-meta">${escapeHtml(item.category)}｜${escapeHtml(item.basePerDisplay)} ${escapeHtml(item.baseUnit)} = 1 ${escapeHtml(item.displayUnit)}</div></div>
-                    ${item.active === false ? '<span class="badge badge-off">停用</span>' : isLow ? '<span class="badge badge-low">補貨</span>' : '<span class="badge badge-ok">充足</span>'}
+                    ${item.active === false ? `<span class="badge badge-off">${t('badge_off')}</span>` : isLow ? `<span class="badge badge-low">${t('badge_low_s')}</span>` : `<span class="badge badge-ok">${t('badge_ok_s')}</span>`}
                 </div>
                 <div class="location-grid">${locKeys.map(key => `<div class="location-tile"><div class="loc">${LOCATION_DEFS[key].name}</div><div class="qty">${formatQty(item, normalizeNumber(item.locations?.[key], 0))}</div></div>`).join("")}</div>
                 ${item.notes ? `<div class="card-notes">${escapeHtml(item.notes)}</div>` : ""}
                 <div class="card-actions">
-                    <button class="card-act-btn act-receive" id="actbtn-receive-${item.id}" type="button" ${dis} onclick="toggleCardAction(${item.id},'receive')">📦 入庫</button>
-                    ${item.enableThaw ? `<button class="card-act-btn act-prep" id="actbtn-prep-${item.id}" type="button" ${dis} onclick="toggleCardAction(${item.id},'prep')">🍕 備料</button>` : ""}
-                    <button class="card-act-btn act-consume" id="actbtn-consume-${item.id}" type="button" ${dis} onclick="toggleCardAction(${item.id},'consume')">📤 消耗</button>
-                    ${item.enableReturn ? `<button class="card-act-btn act-return" id="actbtn-return-${item.id}" type="button" ${dis} onclick="toggleCardAction(${item.id},'return')">↩️ 回放</button>` : ""}
+                    <button class="card-act-btn act-receive" id="actbtn-receive-${item.id}" type="button" ${dis} onclick="toggleCardAction(${item.id},'receive')">${t('btn_receive_c')}</button>
+                    ${item.enableThaw ? `<button class="card-act-btn act-prep" id="actbtn-prep-${item.id}" type="button" ${dis} onclick="toggleCardAction(${item.id},'prep')">${t('btn_prep_c')}</button>` : ""}
+                    <button class="card-act-btn act-consume" id="actbtn-consume-${item.id}" type="button" ${dis} onclick="toggleCardAction(${item.id},'consume')">${t('btn_consume_c')}</button>
+                    ${item.enableReturn ? `<button class="card-act-btn act-return" id="actbtn-return-${item.id}" type="button" ${dis} onclick="toggleCardAction(${item.id},'return')">${t('btn_return_c')}</button>` : ""}
                 </div>
                 <div class="card-panel hidden" id="card-panel-${item.id}"></div>
-                <button class="card-log-toggle" id="log-toggle-card-${item.id}" type="button" onclick="toggleItemLog(${item.id})">▼ 展開明細</button>
+                <button class="card-log-toggle" id="log-toggle-card-${item.id}" type="button" onclick="toggleItemLog(${item.id})">${t('detail_expand')}</button>
                 <div class="card-log hidden" id="card-log-${item.id}"></div>
             </article>`;
     }
@@ -914,14 +979,14 @@ const firebaseConfig = {
         if (!guardOnline()) return;
         const item = inventoryData.find(i => String(i.id) === String(itemId));
         if (!item) return;
-        if (type === "return" && !confirm("請確認此品項為完整包裝、未開封，且仍符合保存條件。\n已開封或分裝後的剩餘量不可回放。")) return;
+        if (type === "return" && !confirm(t('confirm_return'))) return;
         const qtyVal = document.getElementById(`qact-qty-${itemId}`)?.value;
         const unit = document.querySelector(`input[name="qact-unit-${itemId}"]:checked`)?.value || item.displayUnit;
         runStockTransaction((items, txLogs) => {
             const it = items.find(i => String(i.id) === String(itemId));
-            if (!it) { alert("找不到此品項，請重新整理。"); return false; }
+            if (!it) { alert(t('item_not_found')); return false; }
             const baseQty = roundQty(qtyToBase(it, qtyVal, unit));
-            if (!Number.isFinite(baseQty) || baseQty <= 0) { alert("請輸入大於 0 的數量。"); return false; }
+            if (!Number.isFinite(baseQty) || baseQty <= 0) { alert(t('enter_qty')); return false; }
             const qtyText  = formatQty(it, baseQty);
             const recLoc   = it.defaultReceiveLocation;
             const retLoc   = it.defaultReturnLocation || recLoc;
@@ -932,19 +997,19 @@ const firebaseConfig = {
             } else if (type === "prep") {
                 const fromLoc = recLoc;
                 const toLoc   = it.defaultIssueLocation || "onsiteChilled";
-                if (normalizeNumber(it.locations[fromLoc], 0) < baseQty) { alert(`${LOCATION_DEFS[fromLoc]?.name || fromLoc} 存量不足。`); return false; }
+                if (normalizeNumber(it.locations[fromLoc], 0) < baseQty) { alert(t('stock_short').replace('{loc}', LOCATION_DEFS[fromLoc]?.name || fromLoc)); return false; }
                 it.locations[fromLoc] = roundQty(it.locations[fromLoc] - baseQty);
                 it.locations[toLoc]   = roundQty(normalizeNumber(it.locations[toLoc], 0) + baseQty);
                 pushLog(txLogs, `🍕 備料：【${it.name}】${LOCATION_DEFS[fromLoc]?.name || fromLoc} → ${LOCATION_DEFS[toLoc]?.name || toLoc}，${qtyText}`, { itemId: it.id, actionType: type, baseQty, fromLocation: fromLoc, toLocation: toLoc });
             } else if (type === "consume") {
                 const fromLoc = it.defaultConsumeLocation || "prep";
-                if (normalizeNumber(it.locations[fromLoc], 0) < baseQty) { alert(`${LOCATION_DEFS[fromLoc]?.name || fromLoc} 存量不足。`); return false; }
+                if (normalizeNumber(it.locations[fromLoc], 0) < baseQty) { alert(t('stock_short').replace('{loc}', LOCATION_DEFS[fromLoc]?.name || fromLoc)); return false; }
                 it.locations[fromLoc] = roundQty(it.locations[fromLoc] - baseQty);
                 it.locations[station] = roundQty(normalizeNumber(it.locations[station], 0) + baseQty);
                 pushLog(txLogs, `📤 消耗：【${it.name}】${LOCATION_DEFS[fromLoc]?.name || fromLoc} → ${LOCATION_DEFS[station]?.name || station}，${qtyText}`, { itemId: it.id, actionType: type, baseQty, fromLocation: fromLoc, toLocation: station });
             } else if (type === "return") {
                 const fromLoc = it.defaultConsumeLocation || "prep";
-                if (normalizeNumber(it.locations[fromLoc], 0) < baseQty) { alert(`${LOCATION_DEFS[fromLoc]?.name || fromLoc} 存量不足。`); return false; }
+                if (normalizeNumber(it.locations[fromLoc], 0) < baseQty) { alert(t('stock_short').replace('{loc}', LOCATION_DEFS[fromLoc]?.name || fromLoc)); return false; }
                 it.locations[fromLoc] = roundQty(it.locations[fromLoc] - baseQty);
                 it.locations[retLoc]  = roundQty(normalizeNumber(it.locations[retLoc], 0) + baseQty);
                 pushLog(txLogs, `↩️ 回放：【${it.name}】${LOCATION_DEFS[fromLoc]?.name || fromLoc} → ${LOCATION_DEFS[retLoc]?.name || retLoc}，${qtyText}`, { itemId: it.id, actionType: type, baseQty, fromLocation: fromLoc, toLocation: retLoc });
@@ -977,11 +1042,11 @@ const firebaseConfig = {
 
     function renderItemLogContent(itemId, limit) {
         const all = itemLogsCache[itemId] || [];
-        if (!all.length) return '<div class="log-empty">近 7 天無操作記錄</div>';
+        if (!all.length) return `<div class="log-empty">${t('no_log_7d')}</div>`;
         const shown = all.slice(0, limit);
         const rows = shown.map(l => `<div class="log-entry"><span class="log-time">${escapeHtml(l.time)}</span><span class="log-text">${escapeHtml(l.text)}</span></div>`).join('');
         const more = all.length > limit
-            ? `<button class="log-more-btn" type="button" onclick="loadMoreItemLog(${itemId})">查看更多（已顯示 ${shown.length} / 共 ${all.length} 筆）</button>`
+            ? `<button class="log-more-btn" type="button" onclick="loadMoreItemLog(${itemId})">${t('log_more').replace('{shown}', shown.length).replace('{total}', all.length)}</button>`
             : '';
         return rows + more;
     }
@@ -993,12 +1058,12 @@ const firebaseConfig = {
             document.getElementById(`log-subrow-${itemId}`)?.classList.add("hidden");
             document.getElementById(`card-log-${itemId}`)?.classList.add("hidden");
             const tableBtn = document.getElementById(`log-toggle-table-${itemId}`);
-            if (tableBtn) { tableBtn.textContent = "明細"; tableBtn.classList.remove("open"); }
+            if (tableBtn) { tableBtn.textContent = t('detail_open'); tableBtn.classList.remove("open"); }
             const cardBtn = document.getElementById(`log-toggle-card-${itemId}`);
-            if (cardBtn) { cardBtn.textContent = "▼ 展開明細"; cardBtn.classList.remove("open"); }
+            if (cardBtn) { cardBtn.textContent = t('detail_expand'); cardBtn.classList.remove("open"); }
         } else {
             logExpandState[itemId] = 10;
-            const loading = '<div class="log-empty">載入中…</div>';
+            const loading = `<div class="log-empty">${t('loading_log')}</div>`;
             const subrow = document.getElementById(`log-subrow-${itemId}`);
             if (subrow) {
                 document.getElementById(`log-subrow-content-${itemId}`).innerHTML = loading;
@@ -1007,9 +1072,9 @@ const firebaseConfig = {
             const cardLog = document.getElementById(`card-log-${itemId}`);
             if (cardLog) { cardLog.innerHTML = loading; cardLog.classList.remove("hidden"); }
             const tableBtn = document.getElementById(`log-toggle-table-${itemId}`);
-            if (tableBtn) { tableBtn.textContent = "收合"; tableBtn.classList.add("open"); }
+            if (tableBtn) { tableBtn.textContent = t('detail_close'); tableBtn.classList.add("open"); }
             const cardBtn = document.getElementById(`log-toggle-card-${itemId}`);
-            if (cardBtn) { cardBtn.textContent = "▲ 收合明細"; cardBtn.classList.add("open"); }
+            if (cardBtn) { cardBtn.textContent = t('detail_collapse'); cardBtn.classList.add("open"); }
             await fetchItemLogs(itemId);
             const content = renderItemLogContent(itemId, 10);
             if (subrow) document.getElementById(`log-subrow-content-${itemId}`).innerHTML = content;
@@ -1062,23 +1127,23 @@ const firebaseConfig = {
                 <input class="panel-input panel-qty-input" id="card-qty-${item.id}" type="number" min="0" step="any" inputmode="decimal" placeholder="0">
                 <div class="unit-chips">${unitChips}</div>
             </div>
-            <input class="panel-note" type="text" id="card-note-${item.id}" placeholder="備註（選填）">`;
+            <input class="panel-note" type="text" id="card-note-${item.id}" placeholder="${t('panel_note_ph')}">`;
 
         if (type === "receive") {
             const loc = LOCATION_DEFS[item.defaultReceiveLocation];
             return `
-                <div class="panel-row"><span class="panel-label">入庫至</span><span class="panel-loc-info" style="background:#e8f5e9;color:#2e7d32;">${loc?.name || item.defaultReceiveLocation}</span></div>
+                <div class="panel-row"><span class="panel-label">${t('panel_receive_lbl')}</span><span class="panel-loc-info" style="background:#e8f5e9;color:#2e7d32;">${loc?.name || item.defaultReceiveLocation}</span></div>
                 ${qtyRow}
-                <button class="panel-submit" type="button" style="background:#2e7d32;color:#fff;" onclick="submitCardAction(${item.id},'receive')">✅ 確認入庫</button>`;
+                <button class="panel-submit" type="button" style="background:#2e7d32;color:#fff;" onclick="submitCardAction(${item.id},'receive')">${t('panel_ok_receive')}</button>`;
         }
 
         if (type === "prep") {
             const fromDef = LOCATION_DEFS[item.defaultReceiveLocation];
             const toDef   = LOCATION_DEFS[item.defaultIssueLocation] || LOCATION_DEFS["onsiteChilled"];
             return `
-                <div class="panel-row"><span class="panel-label">備料</span><span class="panel-loc-info" style="background:#e0f2f1;color:#006064;">${fromDef?.name || item.defaultReceiveLocation}</span><span style="font-size:12px;color:#999;">→</span><span class="panel-loc-info" style="background:#e8f5e9;color:#2e7d32;">${toDef?.name}</span></div>
+                <div class="panel-row"><span class="panel-label">${t('panel_prep_lbl')}</span><span class="panel-loc-info" style="background:#e0f2f1;color:#006064;">${fromDef?.name || item.defaultReceiveLocation}</span><span style="font-size:12px;color:#999;">→</span><span class="panel-loc-info" style="background:#e8f5e9;color:#2e7d32;">${toDef?.name}</span></div>
                 ${qtyRow}
-                <button class="panel-submit" type="button" style="background:#006064;color:#fff;" onclick="submitCardAction(${item.id},'prep')">🍕 確認備料</button>`;
+                <button class="panel-submit" type="button" style="background:#006064;color:#fff;" onclick="submitCardAction(${item.id},'prep')">${t('panel_ok_prep')}</button>`;
         }
 
         if (type === "consume") {
@@ -1086,9 +1151,9 @@ const firebaseConfig = {
             const fromDef = LOCATION_DEFS[fromKey];
             const staDef  = LOCATION_DEFS[item.primaryStation] || LOCATION_DEFS["pizzaStation"];
             return `
-                <div class="panel-row"><span class="panel-label">消耗</span><span class="panel-loc-info" style="background:#ffebee;color:#c62828;">${fromDef?.name || fromKey}</span><span style="font-size:12px;color:#999;">→</span><span class="panel-loc-info" style="background:#fff3e0;color:#e65100;">${staDef?.name}</span></div>
+                <div class="panel-row"><span class="panel-label">${t('panel_consume_lbl')}</span><span class="panel-loc-info" style="background:#ffebee;color:#c62828;">${fromDef?.name || fromKey}</span><span style="font-size:12px;color:#999;">→</span><span class="panel-loc-info" style="background:#fff3e0;color:#e65100;">${staDef?.name}</span></div>
                 ${qtyRow}
-                <button class="panel-submit" type="button" style="background:#c62828;color:#fff;" onclick="submitCardAction(${item.id},'consume')">📤 確認消耗</button>`;
+                <button class="panel-submit" type="button" style="background:#c62828;color:#fff;" onclick="submitCardAction(${item.id},'consume')">${t('panel_ok_consume')}</button>`;
         }
 
         if (type === "return") {
@@ -1097,10 +1162,10 @@ const firebaseConfig = {
             const retKey  = item.defaultReturnLocation || item.defaultReceiveLocation;
             const retDef  = LOCATION_DEFS[retKey];
             return `
-                <div class="panel-row"><span class="panel-label">回放</span><span class="panel-loc-info" style="background:#fff3e0;color:#e65100;">${fromDef?.name || fromKey}</span><span style="font-size:12px;color:#999;">→</span><span class="panel-loc-info" style="background:#e8f5e9;color:#2e7d32;">${retDef?.name || retKey}</span></div>
-                <p style="font-size:12px;color:#c62828;margin:6px 0 0;line-height:1.5;">⚠️ 僅限完整包裝、未開封且符合保存條件的品項</p>
+                <div class="panel-row"><span class="panel-label">${t('panel_return_lbl')}</span><span class="panel-loc-info" style="background:#fff3e0;color:#e65100;">${fromDef?.name || fromKey}</span><span style="font-size:12px;color:#999;">→</span><span class="panel-loc-info" style="background:#e8f5e9;color:#2e7d32;">${retDef?.name || retKey}</span></div>
+                <p style="font-size:12px;color:#c62828;margin:6px 0 0;line-height:1.5;">${t('return_warn')}</p>
                 ${qtyRow}
-                <button class="panel-submit" type="button" style="background:#e65100;color:#fff;" onclick="submitCardAction(${item.id},'return')">↩️ 確認回放</button>`;
+                <button class="panel-submit" type="button" style="background:#e65100;color:#fff;" onclick="submitCardAction(${item.id},'return')">${t('panel_ok_return')}</button>`;
         }
         return "";
     }
@@ -1115,9 +1180,9 @@ const firebaseConfig = {
 
         runStockTransaction((items, txLogs) => {
             const it = items.find(i => String(i.id) === String(itemId));
-            if (!it) { alert("找不到此品項，請重新整理。"); return false; }
+            if (!it) { alert(t('item_not_found')); return false; }
             const baseQty = roundQty(qtyToBase(it, qtyVal, unit));
-            if (!Number.isFinite(baseQty) || baseQty <= 0) { alert("請輸入大於 0 的數量。"); return false; }
+            if (!Number.isFinite(baseQty) || baseQty <= 0) { alert(t('enter_qty')); return false; }
             const qtyText  = formatQty(it, baseQty);
             const noteText = noteVal ? `｜${noteVal}` : "";
             const recLoc   = it.defaultReceiveLocation;
@@ -1129,19 +1194,19 @@ const firebaseConfig = {
             } else if (type === "prep") {
                 const fromLoc = recLoc;
                 const toLoc   = it.defaultIssueLocation || "onsiteChilled";
-                if (normalizeNumber(it.locations[fromLoc], 0) < baseQty) { alert(`${LOCATION_DEFS[fromLoc]?.name || fromLoc} 存量不足。`); return false; }
+                if (normalizeNumber(it.locations[fromLoc], 0) < baseQty) { alert(t('stock_short').replace('{loc}', LOCATION_DEFS[fromLoc]?.name || fromLoc)); return false; }
                 it.locations[fromLoc] = roundQty(it.locations[fromLoc] - baseQty);
                 it.locations[toLoc]   = roundQty(normalizeNumber(it.locations[toLoc], 0) + baseQty);
                 pushLog(txLogs, `🍕 備料：【${it.name}】${LOCATION_DEFS[fromLoc]?.name || fromLoc} → ${LOCATION_DEFS[toLoc]?.name || toLoc}，${qtyText}${noteText}`, { itemId: it.id, actionType: type, baseQty, fromLocation: fromLoc, toLocation: toLoc });
             } else if (type === "consume") {
                 const fromLoc = it.defaultConsumeLocation || "prep";
-                if (normalizeNumber(it.locations[fromLoc], 0) < baseQty) { alert(`${LOCATION_DEFS[fromLoc]?.name || fromLoc} 存量不足。`); return false; }
+                if (normalizeNumber(it.locations[fromLoc], 0) < baseQty) { alert(t('stock_short').replace('{loc}', LOCATION_DEFS[fromLoc]?.name || fromLoc)); return false; }
                 it.locations[fromLoc] = roundQty(it.locations[fromLoc] - baseQty);
                 it.locations[station] = roundQty(normalizeNumber(it.locations[station], 0) + baseQty);
                 pushLog(txLogs, `📤 消耗：【${it.name}】${LOCATION_DEFS[fromLoc]?.name || fromLoc} → ${LOCATION_DEFS[station]?.name || station}，${qtyText}${noteText}`, { itemId: it.id, actionType: type, baseQty, fromLocation: fromLoc, toLocation: station });
             } else if (type === "return") {
                 const fromLoc = it.defaultConsumeLocation || "prep";
-                if (normalizeNumber(it.locations[fromLoc], 0) < baseQty) { alert(`${LOCATION_DEFS[fromLoc]?.name || fromLoc} 存量不足。`); return false; }
+                if (normalizeNumber(it.locations[fromLoc], 0) < baseQty) { alert(t('stock_short').replace('{loc}', LOCATION_DEFS[fromLoc]?.name || fromLoc)); return false; }
                 it.locations[fromLoc] = roundQty(it.locations[fromLoc] - baseQty);
                 it.locations[retLoc]  = roundQty(normalizeNumber(it.locations[retLoc], 0) + baseQty);
                 pushLog(txLogs, `↩️ 回放：【${it.name}】${LOCATION_DEFS[fromLoc]?.name || fromLoc} → ${LOCATION_DEFS[retLoc]?.name || retLoc}，${qtyText}${noteText}`, { itemId: it.id, actionType: type, baseQty, fromLocation: fromLoc, toLocation: retLoc });
@@ -1157,7 +1222,7 @@ const firebaseConfig = {
     function renderLogs() {
         const container = document.getElementById("logContainer");
         if (!globalLogs.length) {
-            container.innerHTML = '<div style="text-align:center;color:#9aa6a0;">暫無紀錄</div>';
+            container.innerHTML = `<div style="text-align:center;color:#9aa6a0;">${t('no_log')}</div>`;
             return;
         }
         container.innerHTML = globalLogs.map(l => `<div class="log-line"><span class="log-time">${escapeHtml(l.time || "")}</span><span>${escapeHtml(l.text || "")}</span></div>`).join("");
@@ -1172,9 +1237,9 @@ const firebaseConfig = {
 
     window.clearLogs = async function() {
         if (!guardOnline()) return;
-        if (!confirm("確定要清除所有紀錄嗎？所有連線設備都會同步清除。")) return;
+        if (!confirm(t('confirm_clear'))) return;
         const snap = await getDocs(logsRef);
-        if (!snap.size) { showToast("沒有紀錄可清除"); return; }
+        if (!snap.size) { showToast(t('toast_no_logs')); return; }
         const BATCH_SIZE = 500;
         let batch = writeBatch(db);
         let count = 0;
@@ -1183,7 +1248,7 @@ const firebaseConfig = {
             if (++count % BATCH_SIZE === 0) { await batch.commit(); batch = writeBatch(db); }
         }
         if (count % BATCH_SIZE !== 0) await batch.commit();
-        showToast("✅ 紀錄已清除");
+        showToast(t('toast_cleared'));
     };
 
     window.addEventListener("beforeinstallprompt", (event) => {
@@ -1247,16 +1312,17 @@ const firebaseConfig = {
         if (!el) return;
         if (settings.lastFullCountAt) {
             const d = new Date(settings.lastFullCountAt);
-            el.textContent = `上次全品項盤點：${d.toLocaleDateString('zh-TW')} ${d.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+            const locale = currentLang === 'vi' ? 'vi-VN' : 'zh-TW';
+            el.textContent = `${t('last_count')}${d.toLocaleDateString(locale)} ${d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false })}`;
         } else {
-            el.textContent = '（尚無完整盤點紀錄）';
+            el.textContent = t('no_last_count');
         }
     }
 
     function updateFullCountProgress() {
         const total = inventoryData.filter(i => i.active !== false).length;
         const el = document.getElementById('fullCountProgress');
-        if (el) el.textContent = `已確認 ${fullCountConfirmed.size} / ${total} 項`;
+        if (el) el.textContent = t('full_progress').replace('{done}', fullCountConfirmed.size).replace('{total}', total);
     }
 
     window.startFullCount = function() {
@@ -1280,7 +1346,7 @@ const firebaseConfig = {
         if (!guardOnline()) return;
         const total = inventoryData.filter(i => i.active !== false).length;
         if (fullCountConfirmed.size < total) {
-            alert(`還有 ${total - fullCountConfirmed.size} 項尚未確認，請繼續完成後再結束盤點。`);
+            alert(t('full_incomplete').replace('{n}', total - fullCountConfirmed.size));
             return;
         }
         try {
@@ -1288,7 +1354,7 @@ const firebaseConfig = {
         } catch (e) {
             console.warn('儲存盤點完成時間失敗', e);
         }
-        showToast('✅ 全品項盤點完成！');
+        showToast(t('full_done'));
         fullCountMode = false;
         fullCountConfirmed = new Set();
         document.getElementById('fullCountBar').style.display = 'none';
@@ -1337,7 +1403,7 @@ const firebaseConfig = {
         const container = document.getElementById("countItems");
         if (!container) return;
         const items = inventoryData.filter(i => i.active !== false);
-        if (!items.length) { container.innerHTML = '<div class="loading-text">沒有可盤點的品項</div>'; return; }
+        if (!items.length) { container.innerHTML = `<div class="loading-text">${t('no_count_items')}</div>`; return; }
 
         const tableRows = items.map(item => `
             <tr id="count-tr-${item.id}">
@@ -1345,7 +1411,7 @@ const firebaseConfig = {
                 <td class="name-cell"><strong>${escapeHtml(item.name)}</strong><div class="help">${escapeHtml(item.basePerDisplay)} ${escapeHtml(item.baseUnit)} = 1 ${escapeHtml(item.displayUnit)}</div></td>
                 <td>${renderCountLocInputs(item, WAREHOUSE_KEYS)}</td>
                 <td>${renderCountLocInputs(item, PREP_KEYS)}</td>
-                <td><button class="count-table-confirm-btn" type="button" onclick="submitItemCount(${item.id})">✓ 確認</button></td>
+                <td><button class="count-table-confirm-btn" type="button" onclick="submitItemCount(${item.id})">${t('count_confirm_btn')}</button></td>
             </tr>`).join("");
 
         const cards = items.map(item => {
@@ -1353,7 +1419,7 @@ const firebaseConfig = {
                 const currentDisplay = toDisplayQty(item, normalizeNumber(item.locations?.[key], 0));
                 return `<div class="count-loc-row">
                     <span class="count-loc-name">${LOCATION_DEFS[key].short}</span>
-                    <span class="count-loc-current">現：${currentDisplay} ${escapeHtml(item.displayUnit)}</span>
+                    <span class="count-loc-current">${t('count_current')}${currentDisplay} ${escapeHtml(item.displayUnit)}</span>
                     <input class="count-loc-input" type="number" min="0" step="any" inputmode="decimal"
                         id="count-c-${item.id}-${key}" value="${currentDisplay}" oninput="markCountDirty(${item.id})">
                     <span class="count-loc-unit">${escapeHtml(item.displayUnit)}</span>
@@ -1423,7 +1489,7 @@ const firebaseConfig = {
         }
         runStockTransaction((items, txLogs) => {
             const it = items.find(i => String(i.id) === String(itemId));
-            if (!it) { alert("找不到此品項，請重新整理。"); return false; }
+            if (!it) { alert(t('item_not_found')); return false; }
             const changes = [];
             for (const key of allowed) {
                 const oldBase = roundQty(normalizeNumber(it.locations?.[key], 0));
@@ -1436,7 +1502,7 @@ const firebaseConfig = {
                 it.locations[key] = newBase;
                 changes.push(`${LOCATION_DEFS[key]?.short || key}：${oldTxt} → ${newTxt}（${diffTxt}）`);
             }
-            if (!changes.length) { showToast("數量無變動，未寫入"); return false; }
+            if (!changes.length) { showToast(t('toast_no_change')); return false; }
             pushLog(txLogs, `📋 盤點修正：【${it.name}】${changes.join("，")}`, { itemId: it.id, actionType: "count" });
         }).then(() => {
             const card = document.getElementById(`count-card-${itemId}`);
@@ -1452,7 +1518,7 @@ const firebaseConfig = {
 
     window.installPwaPrompt = async function() {
         if (!deferredInstallPrompt) {
-            showToast("可使用瀏覽器分享選單加入主畫面");
+            showToast(t('toast_pwa'));
             return;
         }
         deferredInstallPrompt.prompt();
