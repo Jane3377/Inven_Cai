@@ -87,6 +87,9 @@
         .btn-secondary { background: #607d8b; color: #fff; border-color: #607d8b; }
         .btn-ghost { background: transparent; box-shadow: none; color: var(--muted); border: 1px solid var(--line-color); }
         .btn-small { padding: 7px 11px; font-size: 13px; }
+        .lang-toggle { display:flex; gap:3px; align-items:center; }
+        .lang-btn { padding:5px 10px; font-size:12px; font-weight:700; border-radius:999px; border:1px solid var(--line-color); background:#fff; color:#555; cursor:pointer; transition:all .15s; }
+        .lang-btn.active { background:var(--primary-color); color:#fff; border-color:var(--primary-color); }
         .panel {
             background: var(--card-bg);
             border-radius: var(--radius-lg);
@@ -276,8 +279,12 @@
             <p class="subtitle">平板優先・手機卡片式・多庫位・支援 g / 包換算・PWA <span class="pwa-hint">｜可加入主畫面</span></p>
         </div>
         <div class="header-actions">
+            <div class="lang-toggle">
+                <button class="lang-btn active" id="langZh" type="button" onclick="setLang('zh')">中</button>
+                <button class="lang-btn" id="langVi" type="button" onclick="setLang('vi')">VI</button>
+            </div>
             <div class="sync-status sync-syncing" id="syncStatus"><span class="dot"></span><span id="syncText">同步中…</span></div>
-            <button class="btn btn-ghost btn-small" type="button" onclick="installPwaPrompt()">加入主畫面</button>
+            <button class="btn btn-ghost btn-small" id="installPwaBtn" type="button" onclick="installPwaPrompt()">加入主畫面</button>
         </div>
     </header>
 
@@ -289,14 +296,14 @@
 
     <main id="stockView" class="panel">
         <div class="alert-box" id="alertBox">
-            <strong style="color:#c62828;">⚠️ 叫貨提醒：</strong> 以下大倉區庫存低於安全線，請安排叫貨。
+            <strong style="color:#c62828;"><span id="alertBoxTitle">⚠️ 叫貨提醒：</span></strong> <span id="alertBoxSub">以下大倉區庫存低於安全線，請安排叫貨。</span>
             <ul id="alertList"></ul>
         </div>
 
         <div class="toolbar">
             <input id="searchInput" class="search-input" type="search" placeholder="搜尋品項、分類或單位…" oninput="renderInventory()">
             <div class="chip-row">
-                <label class="chip"><input id="showInactive" type="checkbox" onchange="renderInventory()"> 顯示停用品項</label>
+                <label class="chip"><input id="showInactive" type="checkbox" onchange="renderInventory()"> <span id="showInactiveLabel">顯示停用品項</span></label>
             </div>
         </div>
 
@@ -306,14 +313,14 @@
             <table>
                 <thead>
                     <tr>
-                        <th style="width:5%;">類別</th>
-                        <th style="text-align:left;width:15%;">食材 / 物品</th>
-                        <th style="width:13%;">大倉</th>
-                        <th style="width:11%;">備貨</th>
-                        <th style="width:9%;">提醒</th>
-                        <th style="width:12%;">數量</th>
-                        <th style="width:22%;">動作</th>
-                        <th style="width:13%;">資訊</th>
+                        <th id="th-col-cat" style="width:5%;">類別</th>
+                        <th id="th-col-name" style="text-align:left;width:15%;">食材 / 物品</th>
+                        <th id="th-col-wh" style="width:13%;">大倉</th>
+                        <th id="th-col-prep" style="width:11%;">備貨</th>
+                        <th id="th-col-alert" style="width:9%;">提醒</th>
+                        <th id="th-col-qty" style="width:12%;">數量</th>
+                        <th id="th-col-action" style="width:22%;">動作</th>
+                        <th id="th-col-info" style="width:13%;">資訊</th>
                     </tr>
                 </thead>
                 <tbody id="inventoryBody"><tr><td colspan="7" class="loading-text">🔄 正在載入資料庫，請稍候...</td></tr></tbody>
@@ -323,8 +330,8 @@
 
         <section style="margin-top:26px;border-top:2px dashed #dce3df;padding-top:14px;">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-                <strong style="color:#43534b;">🕒 異動日誌</strong>
-                <button class="btn btn-ghost btn-small" data-write="true" type="button" onclick="clearLogs()">清除紀錄</button>
+                <strong id="logSectionTitle" style="color:#43534b;">🕒 異動日誌</strong>
+                <button class="btn btn-ghost btn-small" id="clearLogsBtn" data-write="true" type="button" onclick="clearLogs()">清除紀錄</button>
             </div>
             <div class="log-container" id="logContainer"></div>
         </section>
@@ -336,30 +343,30 @@
 <main id="countView" class="panel hidden">
     <!-- PIN gate -->
     <div id="countPinOverlay" class="count-pin-wrap">
-        <h3>🔒 請輸入盤點代碼</h3>
-        <p style="color:#8a9690;font-size:13px;margin:0 0 18px;">盤點代碼可在品項管理後台 → 系統設定中修改</p>
+        <h3 id="countPinTitle">🔒 請輸入盤點代碼</h3>
+        <p id="countPinSubtitle" style="color:#8a9690;font-size:13px;margin:0 0 18px;">盤點代碼可在品項管理後台 → 系統設定中修改</p>
         <input id="countPinInput" class="count-pin-input" type="password" inputmode="numeric" maxlength="8" placeholder="••••"
             onkeydown="if(event.key==='Enter')verifyCountPin()">
-        <button class="btn btn-primary" style="margin-top:14px;width:200px;" type="button" onclick="verifyCountPin()">進入盤點</button>
+        <button id="countPinBtn" class="btn btn-primary" style="margin-top:14px;width:200px;" type="button" onclick="verifyCountPin()">進入盤點</button>
         <div id="countPinError" style="color:#c62828;margin-top:10px;font-size:14px;display:none;">代碼錯誤，請再試一次</div>
     </div>
     <!-- Count content -->
     <div id="countContent" class="hidden">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
             <div>
-                <strong style="font-size:18px;color:var(--primary-dark);">📋 庫存盤點</strong>
-                <div style="font-size:13px;color:#8a9690;margin-top:4px;">輸入各倉位實際數量（顯示單位），確認後寫入系統</div>
+                <strong id="countSectionTitle" style="font-size:18px;color:var(--primary-dark);">📋 庫存盤點</strong>
+                <div id="countSectionSub" style="font-size:13px;color:#8a9690;margin-top:4px;">輸入各倉位實際數量（顯示單位），確認後寫入系統</div>
                 <div id="lastFullCountInfo" style="font-size:12px;color:#8a9690;margin-top:3px;"></div>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
                 <button class="btn btn-primary btn-small" id="startFullCountBtn" type="button" onclick="startFullCount()">全品項盤點</button>
-                <button class="btn btn-ghost btn-small" type="button" onclick="lockCount()">🔒 鎖定</button>
+                <button class="btn btn-ghost btn-small" id="lockCountBtn" type="button" onclick="lockCount()">🔒 鎖定</button>
             </div>
         </div>
         <div id="fullCountBar" class="full-count-bar" style="display:none;">
             <span class="full-count-progress" id="fullCountProgress">已確認 0 / 0 項</span>
-            <button class="btn btn-ghost btn-small" type="button" onclick="cancelFullCount()">取消</button>
-            <button class="btn btn-primary btn-small" type="button" onclick="finishFullCount()">✓ 完成盤點</button>
+            <button class="btn btn-ghost btn-small" id="cancelFullCountBtn" type="button" onclick="cancelFullCount()">取消</button>
+            <button class="btn btn-primary btn-small" id="finishFullCountBtn" type="button" onclick="finishFullCount()">✓ 完成盤點</button>
         </div>
         <div id="countItems" class="count-items-grid"></div>
     </div>
@@ -412,17 +419,93 @@ const firebaseConfig = {
     let isOffline = false;
     let deferredInstallPrompt = null;
 
+    // ── Language (i18n) ────────────────────────────────────────
+    const T = {
+        zh: {
+            tab_stock: '庫存操作', tab_count: '📋 盤點',
+            syncing: '同步中…', synced: '✓ 已同步', sync_failed: '⚠ 連線失敗，僅供檢視',
+            install_pwa: '加入主畫面',
+            col_cat: '類別', col_name: '食材 / 物品', col_wh: '大倉', col_prep: '備貨',
+            col_alert: '提醒', col_qty: '數量', col_action: '動作', col_info: '資訊',
+            search_ph: '搜尋品項、分類或單位…', show_inactive: '顯示停用品項',
+            alert_title: '⚠️ 叫貨提醒：', alert_sub: '以下大倉區庫存低於安全線，請安排叫貨。',
+            log_title: '🕒 異動日誌', clear_logs: '清除紀錄',
+            pin_title: '🔒 請輸入盤點代碼', pin_sub: '盤點代碼可在品項管理後台 → 系統設定中修改',
+            pin_btn: '進入盤點', pin_error: '代碼錯誤，請再試一次',
+            count_title: '📋 庫存盤點', count_sub: '輸入各倉位實際數量（顯示單位），確認後寫入系統',
+            full_count_btn: '全品項盤點', lock_btn: '🔒 鎖定',
+            cancel_btn: '取消', finish_btn: '✓ 完成盤點',
+        },
+        vi: {
+            tab_stock: 'Kho hàng', tab_count: '📋 Kiểm kê',
+            syncing: 'Đang đồng bộ…', synced: '✓ Đã đồng bộ', sync_failed: '⚠ Mất kết nối, chỉ xem',
+            install_pwa: 'Thêm màn hình chính',
+            col_cat: 'Loại', col_name: 'Nguyên liệu / Vật phẩm', col_wh: 'Kho chính', col_prep: 'Sơ chế',
+            col_alert: 'Cảnh báo', col_qty: 'Số lượng', col_action: 'Thao tác', col_info: 'Thông tin',
+            search_ph: 'Tìm kiếm mặt hàng, danh mục…', show_inactive: 'Hiển thị mặt hàng ngưng dùng',
+            alert_title: '⚠️ Nhắc đặt hàng：', alert_sub: 'Kho chính dưới mức an toàn, hãy đặt hàng.',
+            log_title: '🕒 Nhật ký thay đổi', clear_logs: 'Xóa nhật ký',
+            pin_title: '🔒 Nhập mã kiểm kê', pin_sub: 'Mã kiểm kê có thể thay đổi trong trang quản trị → Cài đặt hệ thống',
+            pin_btn: 'Vào kiểm kê', pin_error: 'Mã sai, vui lòng thử lại',
+            count_title: '📋 Kiểm kê kho', count_sub: 'Nhập số lượng thực tế từng khu vực, xác nhận để ghi vào hệ thống',
+            full_count_btn: 'Kiểm kê toàn bộ', lock_btn: '🔒 Khóa',
+            cancel_btn: 'Hủy', finish_btn: '✓ Hoàn thành kiểm kê',
+        }
+    };
+    let currentLang = localStorage.getItem('inventoryLang') || 'zh';
+    function t(key) { return T[currentLang]?.[key] ?? T.zh[key] ?? key; }
+
+    function applyStaticLang() {
+        const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+        set('tabStock', t('tab_stock'));
+        set('tabCount', t('tab_count'));
+        set('installPwaBtn', t('install_pwa'));
+        set('th-col-cat', t('col_cat'));
+        set('th-col-name', t('col_name'));
+        set('th-col-wh', t('col_wh'));
+        set('th-col-prep', t('col_prep'));
+        set('th-col-alert', t('col_alert'));
+        set('th-col-qty', t('col_qty'));
+        set('th-col-action', t('col_action'));
+        set('th-col-info', t('col_info'));
+        const si = document.getElementById('searchInput'); if (si) si.placeholder = t('search_ph');
+        set('showInactiveLabel', t('show_inactive'));
+        set('alertBoxTitle', t('alert_title'));
+        set('alertBoxSub', t('alert_sub'));
+        set('logSectionTitle', t('log_title'));
+        set('clearLogsBtn', t('clear_logs'));
+        set('countPinTitle', t('pin_title'));
+        set('countPinSubtitle', t('pin_sub'));
+        set('countPinBtn', t('pin_btn'));
+        set('countPinError', t('pin_error'));
+        set('countSectionTitle', t('count_title'));
+        set('countSectionSub', t('count_sub'));
+        set('startFullCountBtn', t('full_count_btn'));
+        set('lockCountBtn', t('lock_btn'));
+        set('cancelFullCountBtn', t('cancel_btn'));
+        set('finishFullCountBtn', t('finish_btn'));
+        document.getElementById('langZh')?.classList.toggle('active', currentLang === 'zh');
+        document.getElementById('langVi')?.classList.toggle('active', currentLang === 'vi');
+    }
+
+    window.setLang = function(lang) {
+        currentLang = lang;
+        localStorage.setItem('inventoryLang', lang);
+        applyStaticLang();
+        renderAll();
+    };
+
     function setSyncStatus(state) {
         const el = document.getElementById("syncStatus");
         const txt = document.getElementById("syncText");
         if (!el || !txt) return;
         el.classList.remove("sync-syncing", "sync-synced", "sync-failed");
         if (state === "syncing") {
-            el.classList.add("sync-syncing"); txt.textContent = "同步中…";
+            el.classList.add("sync-syncing"); txt.textContent = t('syncing');
         } else if (state === "synced") {
-            el.classList.add("sync-synced"); txt.textContent = "✓ 已同步";
+            el.classList.add("sync-synced"); txt.textContent = t('synced');
         } else {
-            el.classList.add("sync-failed"); txt.textContent = "⚠ 連線失敗，僅供檢視";
+            el.classList.add("sync-failed"); txt.textContent = t('sync_failed');
         }
     }
 
@@ -1376,6 +1459,8 @@ const firebaseConfig = {
         await deferredInstallPrompt.userChoice;
         deferredInstallPrompt = null;
     };
+
+    applyStaticLang();
 
     if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
