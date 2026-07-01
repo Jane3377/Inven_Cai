@@ -775,6 +775,22 @@
             allowedLocations, sortOrder, active, notes
         };
 
+        // Warn if a prep location is being removed but still has stock
+        if (idVal) {
+            const PREP_KEYS = ['onsiteChilled', 'prep'];
+            const existing = inventoryData.find(i => String(i.id) === String(idVal));
+            if (existing) {
+                const oldPrep = (existing.allowedLocations || []).filter(k => PREP_KEYS.includes(k));
+                const newPrep = allowedLocations.filter(k => PREP_KEYS.includes(k));
+                const removed = oldPrep.filter(k => !newPrep.includes(k));
+                const warns = removed.filter(k => (existing.locations?.[k] || 0) > 0).map(k => {
+                    const qty = (existing.locations[k] / (existing.basePerDisplay || 1)).toFixed(2).replace(/\.?0+$/, '');
+                    return `「${LOCATION_DEFS[k].name}」目前有 ${qty} ${existing.displayUnit}`;
+                });
+                if (warns.length && !confirm(`注意：以下備料倉位將從設定中移除，但仍有庫存：\n\n${warns.join('\n')}\n\n請確認現場已處理，確定要繼續儲存嗎？`)) return;
+            }
+        }
+
         runItemTransaction((items, txLogs) => {
             const idx = items.findIndex(i => String(i.id) === String(patch.id));
             if (idx >= 0) {

@@ -1137,11 +1137,18 @@ const firebaseConfig = {
         document.getElementById("countPinInput").value = "";
     };
 
+    function countLocKeys(item) {
+        const configured = (item.allowedLocations || []).filter(k => !STATION_KEYS.includes(k));
+        const withStock = [...WAREHOUSE_KEYS, ...PREP_KEYS].filter(k => (item.locations?.[k] || 0) > 0);
+        const all = new Set([...configured, ...withStock]);
+        return [...WAREHOUSE_KEYS, ...PREP_KEYS].filter(k => all.has(k));
+    }
+
     function renderCountLocInputs(item, keys) {
-        const allowed = item.allowedLocations || [];
-        const filtered = keys.filter(k => allowed.includes(k));
-        if (!filtered.length) return '<div style="color:#ccc;font-size:12px;text-align:center;">—</div>';
-        return `<div class="count-input-stack">${filtered.map(key => {
+        const configured = (item.allowedLocations || []).filter(k => !STATION_KEYS.includes(k));
+        const visible = keys.filter(k => configured.includes(k) || (item.locations?.[k] || 0) > 0);
+        if (!visible.length) return '<div style="color:#ccc;font-size:12px;text-align:center;">—</div>';
+        return `<div class="count-input-stack">${visible.map(key => {
             const currentDisplay = toDisplayQty(item, normalizeNumber(item.locations?.[key], 0));
             return `<div class="count-input-row">
                 <span class="count-input-label">${LOCATION_DEFS[key].short}</span>
@@ -1164,12 +1171,11 @@ const firebaseConfig = {
                 <td class="name-cell"><strong>${escapeHtml(item.name)}</strong><div class="help">${escapeHtml(item.basePerDisplay)} ${escapeHtml(item.baseUnit)} = 1 ${escapeHtml(item.displayUnit)}</div></td>
                 <td>${renderCountLocInputs(item, WAREHOUSE_KEYS)}</td>
                 <td>${renderCountLocInputs(item, PREP_KEYS)}</td>
-                <td>${renderCountLocInputs(item, STATION_KEYS)}</td>
                 <td><button class="count-table-confirm-btn" type="button" onclick="submitItemCount(${item.id})">✓ 確認</button></td>
             </tr>`).join("");
 
         const cards = items.map(item => {
-            const locRows = (item.allowedLocations || []).map(key => {
+            const locRows = countLocKeys(item).map(key => {
                 const currentDisplay = toDisplayQty(item, normalizeNumber(item.locations?.[key], 0));
                 return `<div class="count-loc-row">
                     <span class="count-loc-name">${LOCATION_DEFS[key].short}</span>
@@ -1195,11 +1201,10 @@ const firebaseConfig = {
                 <table>
                     <thead><tr>
                         <th style="width:8%">類別</th>
-                        <th style="text-align:left;width:20%">食材 / 物品</th>
-                        <th style="width:22%">大倉</th>
-                        <th style="width:22%">備貨</th>
-                        <th style="width:13%">使用區</th>
-                        <th style="width:15%">確認</th>
+                        <th style="text-align:left;width:22%">食材 / 物品</th>
+                        <th style="width:28%">大倉</th>
+                        <th style="width:28%">備貨</th>
+                        <th style="width:14%">確認</th>
                     </tr></thead>
                     <tbody>${tableRows}</tbody>
                 </table>
@@ -1218,7 +1223,7 @@ const firebaseConfig = {
         if (!guardOnline()) return;
         const item = inventoryData.find(i => String(i.id) === String(itemId));
         if (!item) return;
-        const allowed = item.allowedLocations || [];
+        const allowed = countLocKeys(item);
         const useTable = window.innerWidth > 680;
         const prefix = useTable ? `count-t-${itemId}-` : `count-c-${itemId}-`;
         const newVals = {};
