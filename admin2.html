@@ -812,6 +812,10 @@
             alert('請完整填寫名稱、分類、顯示單位、基準單位'); return;
         }
 
+        if (displayUnit === baseUnit && basePerDisplay !== 1) {
+            if (!confirm(`換算設定為「${basePerDisplay} ${baseUnit} = 1 ${displayUnit}」，但顯示單位與基準單位相同。\n\n確定要使用此換算嗎？`)) return;
+        }
+
         const patch = {
             id: idVal ? nn(idVal) : Date.now(),
             name, ...(nameVi ? { nameVi } : {}), category, storageType, displayUnit, baseUnit, basePerDisplay,
