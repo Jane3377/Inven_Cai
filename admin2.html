@@ -1348,10 +1348,33 @@ ${JSON.stringify(list, null, 2)}
             }
         }
 
+        // If main storage (receive) location changed and old location has stock, confirm zeroing
+        let zeroOutLoc = null;
+        if (idVal) {
+            const existing = inventoryData.find(i => String(i.id) === String(idVal));
+            if (existing && existing.defaultReceiveLocation && existing.defaultReceiveLocation !== defaultReceiveLoc) {
+                const oldLoc = existing.defaultReceiveLocation;
+                const oldStock = existing.locations?.[oldLoc] || 0;
+                if (oldStock > 0) {
+                    const bpd = existing.basePerDisplay || 1;
+                    const disp = oldStock / bpd;
+                    const dispStr = `${Number.isInteger(disp) ? disp : disp.toFixed(2)} ${existing.displayUnit}`;
+                    const oldName = LOCATION_DEFS[oldLoc]?.name || oldLoc;
+                    const newName = LOCATION_DEFS[defaultReceiveLoc]?.name || defaultReceiveLoc;
+                    if (!confirm(`⚠️ 大倉倉位即將從「${oldName}」改為「${newName}」。\n\n「${oldName}」目前還有 ${dispStr}，儲存後系統將自動歸零。\n\n確定要繼續？`)) return;
+                    zeroOutLoc = oldLoc;
+                }
+            }
+        }
+
         runItemTransaction(items => {
             const idx = items.findIndex(i => String(i.id) === String(patch.id));
             if (idx >= 0) {
-                items[idx] = normalizeItem({ ...items[idx], ...patch }, idx);
+                const base = { ...items[idx] };
+                if (zeroOutLoc) {
+                    base.locations = { ...(base.locations || {}), [zeroOutLoc]: 0 };
+                }
+                items[idx] = normalizeItem({ ...base, ...patch }, idx);
             } else {
                 items.push(normalizeItem({ ...patch, locations: {} }, items.length));
             }

@@ -674,12 +674,10 @@ const firebaseConfig = {
     }
 
     function itemStockKeys(item) {
-        const keys = [...WAREHOUSE_KEYS];
-        const consumeKey = item.defaultConsumeLocation || 'prep';
-        if (!keys.includes(consumeKey)) keys.push(consumeKey);
-        if (item.enableThaw) {
-            const issueKey = item.defaultIssueLocation;
-            if (issueKey && !keys.includes(issueKey)) keys.push(issueKey);
+        const keys = [];
+        if (item.defaultReceiveLocation) keys.push(item.defaultReceiveLocation);
+        if (item.enableThaw && item.defaultIssueLocation && !keys.includes(item.defaultIssueLocation)) {
+            keys.push(item.defaultIssueLocation);
         }
         return keys;
     }
