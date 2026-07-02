@@ -481,6 +481,11 @@
                             <button class="btn btn-outline" style="color:#c62828;border-color:#c62828;" onclick="cleanupOldLogs()">清理 6 個月前記錄</button>
                         </div>
                     </div>
+                    <div class="settings-card" style="max-width:480px;margin-top:16px;border:1.5px solid #c62828;">
+                        <h3 style="color:#c62828;">⚠️ 危險區域</h3>
+                        <p style="font-size:13px;color:#666;margin-bottom:14px;">清除<strong>所有品項的倉位庫存</strong>（全部歸零）並<strong>刪除所有操作記錄</strong>。適用於系統重啟或重新盤點前的初始化。<br><strong style="color:#c62828;">此操作無法復原，請謹慎使用。</strong></p>
+                        <button class="btn" style="background:#c62828;color:#fff;font-weight:700;" onclick="resetAllStock()">一鍵清除所有庫存與記錄</button>
+                    </div>
                 </div>
 
             </div><!-- /settings-main -->
@@ -534,14 +539,8 @@
         </div>
 
         <div class="form-group">
-            <label>📤 消耗從（該品項從哪個倉位出庫）</label>
-            <select id="editConsumeLoc">
-                <option value="warehouseFrozen">大倉冷凍</option>
-                <option value="warehouseChilled">大倉冷藏</option>
-                <option value="warehouseRoom">大倉常溫</option>
-                <option value="onsiteChilled">解凍冷藏</option>
-                <option value="prep">其他備貨</option>
-            </select>
+            <label>📤 消耗從</label>
+            <div style="font-size:13px;color:#666;padding:8px 0;">自動判斷：未開啟備料 → 入庫倉；開啟備料 → 備料至倉</div>
         </div>
 
         <div class="form-row">
@@ -1232,7 +1231,6 @@ ${JSON.stringify(list, null, 2)}
         const preset = STORAGE_PRESETS[stType] || STORAGE_PRESETS['冷凍'];
         document.getElementById('editReceiveLoc').value = item?.defaultReceiveLocation ?? preset.receive;
         document.getElementById('editIssueLoc').value   = item?.defaultIssueLocation   ?? (enableThawVal ? 'onsiteChilled' : 'prep');
-        document.getElementById('editConsumeLoc').value = item?.defaultConsumeLocation ?? 'prep';
         document.getElementById('editReturnLoc').value  = item?.defaultReturnLocation  ?? preset.receive;
 
         // populate category select and set value
@@ -1292,7 +1290,7 @@ ${JSON.stringify(list, null, 2)}
         const primaryStation    = document.getElementById('editPrimaryStation').value;
         const defaultReceiveLoc = document.getElementById('editReceiveLoc').value;
         const defaultIssueLoc   = document.getElementById('editIssueLoc').value;
-        const defaultConsumeLoc = document.getElementById('editConsumeLoc').value;
+        const defaultConsumeLoc = enableThaw ? defaultIssueLoc : defaultReceiveLoc;
         const defaultReturnLoc  = document.getElementById('editReturnLoc').value;
         const notes             = document.getElementById('editNotes').value.trim();
 
@@ -1479,6 +1477,33 @@ ${JSON.stringify(list, null, 2)}
         if (count % BATCH_SIZE !== 0) await batch.commit();
         showToast(`✅ 已清理 ${snap.size} 筆舊記錄`);
         document.getElementById('logStatsDisplay').textContent = '（已更新，請重新查詢統計）';
+    };
+
+    window.resetAllStock = async function() {
+        if (!confirm('⚠️ 此操作將清除所有品項的倉位庫存（全部歸零），並刪除全部操作記錄。\n\n此操作無法復原！確定要繼續嗎？')) return;
+        if (!confirm('再次確認：確定要清除全部庫存數量和所有操作記錄嗎？')) return;
+        try {
+            await runItemTransaction(items => {
+                items.forEach(it => {
+                    if (!it.locations) it.locations = {};
+                    Object.keys(LOCATION_DEFS).forEach(k => { it.locations[k] = 0; });
+                });
+            });
+            const snap = await getDocs(logsRef);
+            if (snap.size > 0) {
+                const BATCH_SIZE = 500;
+                let batch = writeBatch(db);
+                let count = 0;
+                for (const d of snap.docs) {
+                    batch.delete(d.ref);
+                    if (++count % BATCH_SIZE === 0) { await batch.commit(); batch = writeBatch(db); }
+                }
+                if (count % BATCH_SIZE !== 0) await batch.commit();
+            }
+            showToast(`✅ 已清除所有庫存，共刪除 ${snap.size} 筆記錄`);
+        } catch (e) {
+            alert('清除失敗：' + e.message);
+        }
     };
 
     // ── Report ───────────────────────────────────────────
