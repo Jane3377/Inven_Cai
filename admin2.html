@@ -557,12 +557,12 @@
         <div class="form-row">
             <div class="form-group">
                 <label>換算（幾基準單位 = 1 顯示單位）</label>
-                <input type="number" id="editBasePerDisplay" min="0.0001" step="any" placeholder="不換算填 1">
+                <input type="text" inputmode="decimal" id="editBasePerDisplay" placeholder="不換算填 1">
                 <div class="help-text">例：800g = 1包 → 填 800</div>
             </div>
             <div class="form-group">
                 <label>安全線（以顯示單位）</label>
-                <input type="number" id="editThreshold" min="0" step="any" placeholder="例：5">
+                <input type="text" inputmode="decimal" id="editThreshold" placeholder="例：5">
             </div>
         </div>
 
@@ -604,7 +604,7 @@
         <div class="form-row">
             <div class="form-group">
                 <label>排序</label>
-                <input type="number" id="editSortOrder" step="1" placeholder="數字越小越前面">
+                <input type="text" inputmode="numeric" id="editSortOrder" placeholder="數字越小越前面">
             </div>
             <div class="form-group">
                 <label>狀態</label>

@@ -945,7 +945,7 @@ const firebaseConfig = {
                 </td>
                 <td>
                     <div class="qact-input-wrap">
-                        <input class="qact-qty" id="qact-qty-${item.id}" type="number" min="0" step="any" inputmode="decimal" placeholder="0" ${dis}>
+                        <input class="qact-qty" id="qact-qty-${item.id}" type="text" inputmode="decimal" placeholder="0" ${dis}>
                         <div class="unit-chips">${unitChips}</div>
                     </div>
                 </td>
@@ -1170,7 +1170,7 @@ const firebaseConfig = {
         const qtyRow = `
             <div class="panel-row">
                 <span class="panel-label">數量</span>
-                <input class="panel-input panel-qty-input" id="card-qty-${item.id}" type="number" min="0" step="any" inputmode="decimal" placeholder="0">
+                <input class="panel-input panel-qty-input" id="card-qty-${item.id}" type="text" inputmode="decimal" placeholder="0">
                 <div class="unit-chips">${unitChips}</div>
             </div>
             <input class="panel-note" type="text" id="card-note-${item.id}" placeholder="${t('panel_note_ph')}">`;
@@ -1435,7 +1435,7 @@ const firebaseConfig = {
             const currentDisplay = toDisplayQty(item, normalizeNumber(item.locations?.[key], 0));
             return `<div class="count-input-row">
                 <span class="count-input-label">${LOCATION_DEFS[key].short}</span>
-                <input class="count-table-input" type="number" min="0" step="any" inputmode="decimal"
+                <input class="count-table-input" type="text" inputmode="decimal"
                     id="count-t-${item.id}-${key}" value="${currentDisplay}" oninput="markCountDirty(${item.id})">
                 <span class="count-input-unit">${escapeHtml(item.displayUnit)}</span>
             </div>`;
@@ -1463,7 +1463,7 @@ const firebaseConfig = {
                 return `<div class="count-loc-row">
                     <span class="count-loc-name">${LOCATION_DEFS[key].short}</span>
                     <span class="count-loc-current">${t('count_current')}${currentDisplay} ${escapeHtml(item.displayUnit)}</span>
-                    <input class="count-loc-input" type="number" min="0" step="any" inputmode="decimal"
+                    <input class="count-loc-input" type="text" inputmode="decimal"
                         id="count-c-${item.id}-${key}" value="${currentDisplay}" oninput="markCountDirty(${item.id})">
                     <span class="count-loc-unit">${escapeHtml(item.displayUnit)}</span>
                 </div>`;
