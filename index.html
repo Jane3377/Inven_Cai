@@ -1044,7 +1044,7 @@ const firebaseConfig = {
                 if (normalizeNumber(it.locations[fromLoc], 0) < baseQty) { alert(t('stock_short').replace('{loc}', LOCATION_DEFS[fromLoc]?.name || fromLoc)); return false; }
                 it.locations[fromLoc] = roundQty(it.locations[fromLoc] - baseQty);
                 it.locations[station] = roundQty(normalizeNumber(it.locations[station], 0) + baseQty);
-                pushLog(txLogs, `📤 消耗：【${it.name}】${LOCATION_DEFS[fromLoc]?.name || fromLoc} → ${LOCATION_DEFS[station]?.name || station}，${qtyText}`, { itemId: it.id, actionType: type, baseQty, fromLocation: fromLoc, toLocation: station });
+                pushLog(txLogs, `📤 消耗：【${it.name}】${LOCATION_DEFS[fromLoc]?.name || fromLoc} -${qtyText}`, { itemId: it.id, actionType: type, baseQty, fromLocation: fromLoc, toLocation: station });
             } else if (type === "return") {
                 const fromLoc = it.defaultConsumeLocation || "prep";
                 if (normalizeNumber(it.locations[fromLoc], 0) < baseQty) { alert(t('stock_short').replace('{loc}', LOCATION_DEFS[fromLoc]?.name || fromLoc)); return false; }
@@ -1249,7 +1249,7 @@ const firebaseConfig = {
                 if (normalizeNumber(it.locations[fromLoc], 0) < baseQty) { alert(t('stock_short').replace('{loc}', LOCATION_DEFS[fromLoc]?.name || fromLoc)); return false; }
                 it.locations[fromLoc] = roundQty(it.locations[fromLoc] - baseQty);
                 it.locations[station] = roundQty(normalizeNumber(it.locations[station], 0) + baseQty);
-                pushLog(txLogs, `📤 消耗：【${it.name}】${LOCATION_DEFS[fromLoc]?.name || fromLoc} → ${LOCATION_DEFS[station]?.name || station}，${qtyText}${noteText}`, { itemId: it.id, actionType: type, baseQty, fromLocation: fromLoc, toLocation: station });
+                pushLog(txLogs, `📤 消耗：【${it.name}】${LOCATION_DEFS[fromLoc]?.name || fromLoc} -${qtyText}${noteText}`, { itemId: it.id, actionType: type, baseQty, fromLocation: fromLoc, toLocation: station });
             } else if (type === "return") {
                 const fromLoc = it.defaultConsumeLocation || "prep";
                 if (normalizeNumber(it.locations[fromLoc], 0) < baseQty) { alert(t('stock_short').replace('{loc}', LOCATION_DEFS[fromLoc]?.name || fromLoc)); return false; }
