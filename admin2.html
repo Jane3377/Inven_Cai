@@ -173,9 +173,17 @@
 
         /* Toast */
         #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; display: none; z-index: 200; pointer-events: none; white-space: nowrap; }
+
+        /* Offline Banner */
+        #offlineBanner { position: fixed; top: 0; left: 0; right: 0; z-index: 9999; background: #b71c1c; color: #fff; padding: 12px 20px; text-align: center; font-size: 14px; font-weight: 700; display: none; box-shadow: 0 2px 10px rgba(183,28,28,0.45); letter-spacing: 0.3px; }
+        #offlineBanner.show { display: block; }
+        @keyframes banner-shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
+        #offlineBanner.shake { animation: banner-shake 0.38s ease; }
+        body.is-offline { padding-top: 44px; }
     </style>
 </head>
 <body>
+<div id="offlineBanner">📵 目前離線 — 管理操作可能無法儲存，請確認網路連線後再操作</div>
 
 <!-- PIN Screen -->
 <div id="pinScreen">
@@ -1623,6 +1631,23 @@ ${JSON.stringify(list, null, 2)}
         clearTimeout(showToast._t);
         showToast._t = setTimeout(() => { el.style.display = 'none'; }, 2200);
     }
+
+    // ── Offline Banner ────────────────────────────────────
+    (function() {
+        const banner = document.getElementById('offlineBanner');
+        function goOffline() {
+            banner.classList.add('show');
+            document.body.classList.add('is-offline');
+        }
+        function goOnline() {
+            banner.classList.remove('show');
+            document.body.classList.remove('is-offline');
+            showToast('✅ 已恢復連線');
+        }
+        window.addEventListener('offline', goOffline);
+        window.addEventListener('online', goOnline);
+        if (!navigator.onLine) goOffline();
+    })();
 </script>
 </body>
 </html>

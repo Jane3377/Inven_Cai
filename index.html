@@ -157,6 +157,11 @@
         .chip { border-radius: 999px; background: #eef5ef; border: 1px solid #d6e5da; padding: 7px 10px; display: inline-flex; gap: 8px; align-items: center; font-size: 13px; }
         .toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%) translateY(20px); background: #23352b; color: #fff; border-radius: 999px; padding: 10px 16px; opacity: 0; pointer-events: none; transition: all .22s ease; z-index: 200; box-shadow: var(--shadow); }
         .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .offline-banner { position: fixed; top: 0; left: 0; right: 0; z-index: 9999; background: #b71c1c; color: #fff; padding: 12px 20px; text-align: center; font-size: 14px; font-weight: 700; display: none; box-shadow: 0 2px 10px rgba(183,28,28,0.45); letter-spacing: 0.3px; }
+        .offline-banner.show { display: block; }
+        @keyframes banner-shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
+        .offline-banner.shake { animation: banner-shake 0.38s ease; }
+        body.is-offline .app-shell { padding-top: calc(10px + 44px); }
         .count-table-wrap { display: block; }
         .count-cards-mobile { display: none; }
         @media (max-width: 1280px) {
@@ -279,6 +284,7 @@
     </style>
 </head>
 <body>
+<div class="offline-banner" id="offlineBanner">📵 目前離線 — 無法儲存資料，請確認網路連線後再操作</div>
 <div class="app-shell">
     <header class="hero">
         <div>
@@ -461,7 +467,6 @@ const firebaseConfig = {
             confirm_return: '請確認此品項為完整包裝、未開封，且仍符合保存條件。\n已開封或分裝後的剩餘量不可回放。',
             item_not_found: '找不到此品項，請重新整理。', enter_qty: '請輸入大於 0 的數量。',
             stock_short: '{loc} 存量不足。',
-            offline_alert: '⚠️ 目前與雲端連線失敗，無法編輯。\n請確認網路後重試，以免庫存沒有真正寫入。',
             confirm_clear: '確定要清除所有紀錄嗎？所有連線設備都會同步清除。',
             toast_synced: '已寫入並同步庫存', toast_no_change: '數量無變動，未寫入',
             toast_cleared: '✅ 紀錄已清除', toast_no_logs: '沒有紀錄可清除',
@@ -506,7 +511,6 @@ const firebaseConfig = {
             confirm_return: 'Xác nhận mặt hàng còn nguyên bao bì, chưa mở và đạt điều kiện bảo quản.\nHàng đã mở hoặc chia nhỏ không được hoàn trả.',
             item_not_found: 'Không tìm thấy mặt hàng, vui lòng tải lại trang.', enter_qty: 'Vui lòng nhập số lượng lớn hơn 0.',
             stock_short: '{loc} không đủ hàng.',
-            offline_alert: '⚠️ Mất kết nối với máy chủ, không thể chỉnh sửa.\nVui lòng kiểm tra mạng và thử lại.',
             confirm_clear: 'Xóa toàn bộ nhật ký? Tất cả thiết bị kết nối sẽ đồng bộ xóa.',
             toast_synced: 'Đã ghi và đồng bộ kho hàng', toast_no_change: 'Số lượng không thay đổi, không ghi',
             toast_cleared: '✅ Đã xóa nhật ký', toast_no_logs: 'Không có nhật ký để xóa',
@@ -582,12 +586,21 @@ const firebaseConfig = {
         if (locked === isOffline) return;
         isOffline = locked;
         document.body.classList.toggle("is-offline", locked);
+        const banner = document.getElementById('offlineBanner');
+        if (banner) banner.classList.toggle('show', locked);
+        if (!locked) showToast('✅ 已恢復連線');
         renderAll();
     }
 
     function guardOnline() {
         if (isOffline) {
-            alert(t('offline_alert'));
+            const banner = document.getElementById('offlineBanner');
+            if (banner) {
+                banner.classList.remove('shake');
+                void banner.offsetWidth;
+                banner.classList.add('shake');
+            }
+            showToast('❌ 離線中，無法儲存');
             return false;
         }
         return true;
