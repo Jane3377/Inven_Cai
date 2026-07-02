@@ -308,7 +308,7 @@
         </div>
 
         <div class="toolbar">
-            <input id="searchInput" class="search-input" type="search" placeholder="搜尋品項、分類或單位…" oninput="renderInventory()">
+            <input id="searchInput" class="search-input" type="search" placeholder="搜尋品項、分類或單位…" oninput="debouncedRenderInventory()">
         </div>
 
         <div class="filter-container" id="filterContainer"></div>
@@ -327,7 +327,7 @@
                         <th id="th-col-info" style="width:13%;">資訊</th>
                     </tr>
                 </thead>
-                <tbody id="inventoryBody"><tr><td colspan="7" class="loading-text">🔄 正在載入資料庫，請稍候...</td></tr></tbody>
+                <tbody id="inventoryBody"><tr><td colspan="8" class="loading-text">🔄 正在載入資料庫，請稍候...</td></tr></tbody>
             </table>
         </div>
         <div id="mobileCards" class="mobile-cards"></div>
@@ -668,6 +668,12 @@ const firebaseConfig = {
         return keys;
     }
 
+    let _stockCache = new Map();
+    function cachedSumLocations(item) {
+        if (!_stockCache.has(item.id)) _stockCache.set(item.id, sumLocations(item, itemStockKeys(item)));
+        return _stockCache.get(item.id);
+    }
+
     function getAllCategories() {
         const set = new Set(["全部"]);
         (settings.categories || []).forEach(c => c && set.add(c));
@@ -760,16 +766,6 @@ const firebaseConfig = {
         }
     });
 
-    function saveWholeDocument() {
-        const items = normalizeItems(inventoryData);
-        setDoc(docRef, {
-            schemaVersion: SCHEMA_VERSION,
-            items,
-            settings: { ...settings, categories: getAllCategories().filter(c => c !== "全部") },
-            lastUpdated: new Date().toISOString()
-        }).catch(error => alert("資料儲存遇到問題，請稍後再試：" + error.message));
-    }
-
     async function runStockTransaction(mutate, options = {}) {
         if (!guardOnline()) return;
         try {
@@ -821,6 +817,8 @@ const firebaseConfig = {
         renderInventory();
     }
 
+    window.debouncedRenderInventory = (() => { let t; return () => { clearTimeout(t); t = setTimeout(renderInventory, 150); }; })();
+
     function renderFilters() {
         const wrap = document.getElementById("filterContainer");
         if (!wrap) return;
@@ -830,15 +828,14 @@ const firebaseConfig = {
             const display = cat === '全部' ? t('cat_all') : escapeHtml(itemDisplayCategory(cat));
             return `<button class="filter-btn ${cat === currentCategoryFilter ? "active" : ""}" type="button" onclick="filterCategory('${escapeHtml(cat)}')">${display}</button>`;
         }).join("");
-        const datalist = document.getElementById("categoryList");
-        if (datalist) datalist.innerHTML = cats.filter(c => c !== "全部").map(c => `<option value="${escapeHtml(c)}"></option>`).join("");
     }
 
     function lowStockItems() {
-        return inventoryData.filter(item => item.active !== false && sumLocations(item, itemStockKeys(item)) <= item.thresholdBase);
+        return inventoryData.filter(item => item.active !== false && cachedSumLocations(item) <= item.thresholdBase);
     }
 
     function renderInventory() {
+        _stockCache = new Map();
         const tbody = document.getElementById("inventoryBody");
         const mobile = document.getElementById("mobileCards");
         const alertBox = document.getElementById("alertBox");
@@ -846,7 +843,7 @@ const firebaseConfig = {
         const items = filteredItems();
         const lows = lowStockItems();
         if (lows.length > 0) {
-            alertList.innerHTML = lows.map(item => `<li>【${escapeHtml(itemDisplayCategory(item.category))}】${escapeHtml(itemDisplayName(item))}：總庫存剩餘 <strong>${formatQty(item, sumLocations(item, itemStockKeys(item)))}</strong>，安全線 ${formatQty(item, item.thresholdBase)}</li>`).join("");
+            alertList.innerHTML = lows.map(item => `<li>【${escapeHtml(itemDisplayCategory(item.category))}】${escapeHtml(itemDisplayName(item))}：總庫存剩餘 <strong>${formatQty(item, cachedSumLocations(item))}</strong>，安全線 ${formatQty(item, item.thresholdBase)}</li>`).join("");
             alertBox.style.display = "block";
         } else {
             alertBox.style.display = "none";
@@ -892,7 +889,7 @@ const firebaseConfig = {
     }
 
     function renderTableRow(item) {
-        const warehouseBase = sumLocations(item, itemStockKeys(item));
+        const warehouseBase = cachedSumLocations(item);
         const isLow = item.active !== false && warehouseBase <= item.thresholdBase;
         const dis = item.active === false ? "disabled" : "";
         const hasBase = item.allowBaseInput && item.baseUnit !== item.displayUnit;
@@ -964,7 +961,7 @@ const firebaseConfig = {
     }
 
     function renderMobileCard(item) {
-        const warehouseBase = sumLocations(item, itemStockKeys(item));
+        const warehouseBase = cachedSumLocations(item);
         const isLow = item.active !== false && warehouseBase <= item.thresholdBase;
         const prepKeys = item.enableThaw && item.defaultIssueLocation ? [item.defaultIssueLocation] : [];
         const locKeys = [...WAREHOUSE_KEYS, ...prepKeys].filter((key, i, arr) =>
@@ -1036,16 +1033,18 @@ const firebaseConfig = {
         });
     };
 
+    let _openInfoPop = null;
     window.toggleInfoPop = function(event, itemId) {
         event.stopPropagation();
         const pop = document.getElementById(`info-pop-${itemId}`);
         if (!pop) return;
         const isHidden = pop.classList.contains("hidden");
-        document.querySelectorAll(".info-pop").forEach(p => p.classList.add("hidden"));
-        if (isHidden) pop.classList.remove("hidden");
+        if (_openInfoPop && _openInfoPop !== pop) _openInfoPop.classList.add("hidden");
+        _openInfoPop = null;
+        if (isHidden) { pop.classList.remove("hidden"); _openInfoPop = pop; }
     };
     document.addEventListener("click", () => {
-        document.querySelectorAll(".info-pop").forEach(p => p.classList.add("hidden"));
+        if (_openInfoPop) { _openInfoPop.classList.add("hidden"); _openInfoPop = null; }
     });
 
     async function fetchItemLogs(itemId) {
