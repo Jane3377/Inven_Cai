@@ -1534,6 +1534,7 @@ const firebaseConfig = {
             const it = items.find(i => String(i.id) === String(itemId));
             if (!it) { alert(t('item_not_found')); return false; }
             const changes = [];
+            let netAdjBase = 0;
             for (const key of allowed) {
                 const oldBase = roundQty(normalizeNumber(it.locations?.[key], 0));
                 const newBase = newVals[key];
@@ -1542,11 +1543,12 @@ const firebaseConfig = {
                 const newTxt = formatQty(it, newBase, { compact: true });
                 const diffBase = roundQty(newBase - oldBase);
                 const diffTxt = (diffBase > 0 ? "+" : "-") + formatQty(it, Math.abs(diffBase), { compact: true });
+                netAdjBase += diffBase;
                 it.locations[key] = newBase;
                 changes.push(`${LOCATION_DEFS[key]?.short || key}：${oldTxt} → ${newTxt}（${diffTxt}）`);
             }
             if (!changes.length) { showToast(t('toast_no_change')); return 'noop'; }
-            pushLog(txLogs, `📋 盤點修正：【${it.name}】${changes.join("，")}`, { itemId: it.id, actionType: "count" });
+            pushLog(txLogs, `📋 盤點修正：【${it.name}】${changes.join("，")}`, { itemId: it.id, actionType: "count", netAdjBase: roundQty(netAdjBase) });
         }).then(ok => {
             if (!ok) return;
             const card = document.getElementById(`count-card-${itemId}`);
