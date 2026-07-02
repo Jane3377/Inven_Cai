@@ -1197,7 +1197,7 @@ const firebaseConfig = {
             const fromDef = LOCATION_DEFS[fromKey];
             const staDef  = LOCATION_DEFS[item.primaryStation] || LOCATION_DEFS["pizzaStation"];
             return `
-                <div class="panel-row"><span class="panel-label">${t('panel_consume_lbl')}</span><span class="panel-loc-info" style="background:#ffebee;color:#c62828;">${fromDef?.name || fromKey}</span><span style="font-size:12px;color:#999;">→</span></div>
+                <div class="panel-row"><span class="panel-label">${t('panel_consume_lbl')}</span><span class="panel-loc-info" style="background:#ffebee;color:#c62828;">${fromDef?.name || fromKey}</span></div>
                 ${qtyRow}
                 <button class="panel-submit" type="button" style="background:#c62828;color:#fff;" onclick="submitCardAction(${item.id},'consume')">${t('panel_ok_consume')}</button>`;
         }
