@@ -767,7 +767,8 @@ const firebaseConfig = {
     });
 
     async function runStockTransaction(mutate, options = {}) {
-        if (!guardOnline()) return;
+        if (!guardOnline()) return false;
+        let mutateResult;
         try {
             await runTransaction(db, async (tx) => {
                 const snap = await tx.get(docRef);
@@ -775,8 +776,8 @@ const firebaseConfig = {
                 const items = normalizeItems(data.items || []);
                 const pendingLogs = [];
                 const txSettings = { categories: [], locations: Object.values(LOCATION_DEFS), ...(data.settings || {}) };
-                const result = mutate(items, pendingLogs, txSettings);
-                if (result === false) return;
+                mutateResult = mutate(items, pendingLogs, txSettings);
+                if (mutateResult === false || mutateResult === 'noop') return;
                 tx.set(docRef, {
                     schemaVersion: SCHEMA_VERSION,
                     items: normalizeItems(items),
@@ -785,9 +786,12 @@ const firebaseConfig = {
                 });
                 pendingLogs.forEach(logData => tx.set(doc(logsRef), logData));
             });
-            if (!options.silent) showToast(t('toast_synced'));
+            if (mutateResult === false) return false;
+            if (mutateResult !== 'noop' && !options.silent) showToast(t('toast_synced'));
+            return true;
         } catch (error) {
             alert(t('tx_error') + error.message);
+            return false;
         }
     }
 
@@ -1032,7 +1036,8 @@ const firebaseConfig = {
                 it.locations[retLoc]  = roundQty(normalizeNumber(it.locations[retLoc], 0) + baseQty);
                 pushLog(txLogs, `↩️ 回放：【${it.name}】${LOCATION_DEFS[fromLoc]?.name || fromLoc} → ${LOCATION_DEFS[retLoc]?.name || retLoc}，${qtyText}`, { itemId: it.id, actionType: type, baseQty, fromLocation: fromLoc, toLocation: retLoc });
             }
-        }).then(() => {
+        }).then(ok => {
+            if (!ok) return;
             const inp = document.getElementById(`qact-qty-${itemId}`);
             if (inp) inp.value = "";
         });
@@ -1054,7 +1059,12 @@ const firebaseConfig = {
 
     async function fetchItemLogs(itemId) {
         const sevenDaysAgo = Date.now() - 7 * 24 * 3600 * 1000;
-        const snap = await getDocs(query(logsRef, where("itemId", "==", Number(itemId)), fsLimit(300)));
+        let snap;
+        try {
+            snap = await getDocs(query(logsRef, where("itemId", "==", Number(itemId)), orderBy("ts", "desc"), fsLimit(300)));
+        } catch {
+            snap = await getDocs(query(logsRef, where("itemId", "==", Number(itemId)), fsLimit(300)));
+        }
         itemLogsCache[itemId] = snap.docs.map(d => d.data())
             .sort((a, b) => (b.ts || 0) - (a.ts || 0))
             .filter(l => l.ts == null || l.ts >= sevenDaysAgo);
@@ -1231,7 +1241,8 @@ const firebaseConfig = {
                 it.locations[retLoc]  = roundQty(normalizeNumber(it.locations[retLoc], 0) + baseQty);
                 pushLog(txLogs, `↩️ 回放：【${it.name}】${LOCATION_DEFS[fromLoc]?.name || fromLoc} → ${LOCATION_DEFS[retLoc]?.name || retLoc}，${qtyText}${noteText}`, { itemId: it.id, actionType: type, baseQty, fromLocation: fromLoc, toLocation: retLoc });
             }
-        }).then(() => {
+        }).then(ok => {
+            if (!ok) return;
             cardPanelState[itemId] = null;
             ["receive", "prep", "consume", "return"].forEach(t => document.getElementById(`actbtn-${t}-${itemId}`)?.classList.remove("active"));
             const panel = document.getElementById(`card-panel-${itemId}`);
@@ -1518,9 +1529,10 @@ const firebaseConfig = {
                 it.locations[key] = newBase;
                 changes.push(`${LOCATION_DEFS[key]?.short || key}：${oldTxt} → ${newTxt}（${diffTxt}）`);
             }
-            if (!changes.length) { showToast(t('toast_no_change')); return false; }
+            if (!changes.length) { showToast(t('toast_no_change')); return 'noop'; }
             pushLog(txLogs, `📋 盤點修正：【${it.name}】${changes.join("，")}`, { itemId: it.id, actionType: "count" });
-        }).then(() => {
+        }).then(ok => {
+            if (!ok) return;
             const card = document.getElementById(`count-card-${itemId}`);
             if (card) { card.classList.remove("count-dirty"); card.classList.add("count-confirmed"); }
             const tr = document.getElementById(`count-tr-${itemId}`);
