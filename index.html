@@ -169,7 +169,7 @@
             .desktop-table { display: none; }
             .mobile-cards { display: block; }
             .count-table-wrap { display: none; }
-            .count-cards-mobile { display: block; }
+            .count-cards-mobile { display: grid; gap: 14px; }
             .location-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
         @media (max-width: 560px) {
@@ -216,7 +216,6 @@
         .count-pin-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 20px; text-align: center; }
         .count-pin-wrap h3 { margin: 0 0 8px; color: var(--primary-dark); font-size: 20px; }
         .count-pin-input { font-size: 22px; letter-spacing: 10px; text-align: center; border: 2px solid #cdd7d1; border-radius: 12px; padding: 12px 20px; width: 200px; background: #fff; }
-        .count-items-grid { display: grid; gap: 14px; }
         .count-card { background: #fff; border: 1.5px solid #e2e7e4; border-radius: 16px; padding: 16px; }
         .count-card.count-dirty { border-color: #f59e0b; background: #fffdf0; }
         .count-card.count-confirmed { border-color: var(--primary-color); background: #f4fbf4; }
@@ -372,7 +371,7 @@
             <button class="btn btn-ghost btn-small" id="cancelFullCountBtn" type="button" onclick="cancelFullCount()">取消</button>
             <button class="btn btn-primary btn-small" id="finishFullCountBtn" type="button" onclick="finishFullCount()">✓ 完成盤點</button>
         </div>
-        <div id="countItems" class="count-items-grid"></div>
+        <div id="countItems"></div>
     </div>
 </main>
 
@@ -1476,7 +1475,7 @@ const firebaseConfig = {
                     <tbody>${tableRows}</tbody>
                 </table>
             </div>
-            <div class="count-cards-mobile count-items-grid">${cards}</div>`;
+            <div class="count-cards-mobile">${cards}</div>`;
 
         if (fullCountMode) {
             fullCountConfirmed.forEach(id => {

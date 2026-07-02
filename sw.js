@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tsai-inventory-pwa-v46-20260702';
+const CACHE_NAME = 'tsai-inventory-pwa-v47-20260702';
 const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.svg', './icon-512.svg'];
 
 self.addEventListener('install', event => {
