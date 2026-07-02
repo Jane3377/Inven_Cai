@@ -826,12 +826,17 @@ const firebaseConfig = {
         if (!cats.includes(currentCategoryFilter)) currentCategoryFilter = "全部";
         wrap.innerHTML = cats.map(cat => {
             const display = cat === '全部' ? t('cat_all') : escapeHtml(itemDisplayCategory(cat));
-            return `<button class="filter-btn ${cat === currentCategoryFilter ? "active" : ""}" type="button" onclick="filterCategory('${escapeHtml(cat)}')">${display}</button>`;
+            return `<button class="filter-btn ${cat === currentCategoryFilter ? "active" : ""}" type="button" data-cat="${escapeHtml(cat)}">${display}</button>`;
         }).join("");
     }
 
+    document.getElementById("filterContainer").addEventListener("click", e => {
+        const btn = e.target.closest("button[data-cat]");
+        if (btn) window.filterCategory(btn.dataset.cat);
+    });
+
     function lowStockItems() {
-        return inventoryData.filter(item => item.active !== false && cachedSumLocations(item) <= item.thresholdBase);
+        return inventoryData.filter(item => item.active !== false && item.thresholdBase > 0 && cachedSumLocations(item) <= item.thresholdBase);
     }
 
     function renderInventory() {
