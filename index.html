@@ -592,6 +592,10 @@ const firebaseConfig = {
         renderAll();
     }
 
+    window.addEventListener('offline', () => setLocked(true));
+    window.addEventListener('online',  () => setLocked(false));
+    if (!navigator.onLine) setLocked(true);
+
     function guardOnline() {
         if (isOffline) {
             const banner = document.getElementById('offlineBanner');
