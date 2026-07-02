@@ -1486,6 +1486,17 @@ ${JSON.stringify(list, null, 2)}
         return Object.values(item.locations || {}).reduce((s, v) => s + (v || 0), 0);
     }
 
+    function effectiveStockKeys(item) {
+        const keys = [];
+        if (item.defaultReceiveLocation) keys.push(item.defaultReceiveLocation);
+        if (item.enableThaw && item.defaultIssueLocation && !keys.includes(item.defaultIssueLocation)) keys.push(item.defaultIssueLocation);
+        return keys;
+    }
+
+    function effectiveStock(item) {
+        return effectiveStockKeys(item).reduce((s, k) => s + (item.locations?.[k] || 0), 0);
+    }
+
     function getDateRangeTs() {
         const now = new Date();
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -1565,7 +1576,7 @@ ${JSON.stringify(list, null, 2)}
                         if (l.netAdjBase != null) { adj += l.netAdjBase; hasAdj = true; }
                     }
                 });
-                const closing = sumLocations(item);
+                const closing = effectiveStock(item);
                 const opening = closing - (receive + ret - consume + adj);
                 return { name: item.name, category: item.category, opening, receive, consume, ret, adj, hasAdj, closing, bpd: item.basePerDisplay || 1, unit: item.displayUnit };
             });
