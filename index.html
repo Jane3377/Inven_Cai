@@ -745,8 +745,8 @@ const firebaseConfig = {
     }
 
     onSnapshot(docRef, { includeMetadataChanges: true }, (docSnap) => {
-        setLocked(false);
         const meta = docSnap.metadata;
+        if (!meta.fromCache) setLocked(false);
         setSyncStatus(meta.hasPendingWrites || meta.fromCache ? "syncing" : "synced");
         if (docSnap.exists()) {
             const data = docSnap.data();
