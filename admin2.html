@@ -1396,7 +1396,7 @@ ${JSON.stringify(list, null, 2)}
     window.deleteItem = function(itemId) {
         const item = inventoryData.find(i => String(i.id) === String(itemId));
         if (!item) return;
-        const stock = sumLocations(item);
+        const stock = effectiveStock(item);
         const stockWarn = stock > 0
             ? `\n\n⚠️ 此品項仍有庫存 ${parseFloat((stock / (item.basePerDisplay || 1)).toFixed(3))} ${item.displayUnit}，刪除後資料無法復原。`
             : '';
