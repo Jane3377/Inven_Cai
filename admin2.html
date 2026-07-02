@@ -530,7 +530,7 @@
             <div class="form-group">
                 <label>允許備料</label>
                 <div class="toggle-group">
-                    <label><input type="checkbox" id="enableThaw" onchange="onEnableThawChange()"> 開啟（預設關閉）</label>
+                    <label><input type="checkbox" id="enableThaw" onchange="refreshThawVisibility()"> 開啟（預設關閉）</label>
                 </div>
                 <div class="help-text">開啟後員工可執行備料動作（大倉→備料區）</div>
             </div>
@@ -547,7 +547,7 @@
             <div class="form-group">
                 <label>允許回放</label>
                 <div class="toggle-group">
-                    <label><input type="checkbox" id="enableReturn" onchange="onEnableReturnChange()"> 開啟（預設關閉）</label>
+                    <label><input type="checkbox" id="enableReturn" onchange="refreshReturnVisibility()"> 開啟（預設關閉）</label>
                 </div>
                 <div class="help-text">開啟後員工可將備貨退回大倉</div>
             </div>
@@ -664,7 +664,6 @@
             displayUnit: item.displayUnit || '個',
             baseUnit: item.baseUnit || item.displayUnit || '個',
             basePerDisplay,
-            storageType, enableThaw, enableReturn, primaryStation,
             thresholdDisplay,
             thresholdBase: nn(item.thresholdBase, thresholdDisplay * basePerDisplay),
             defaultReceiveLocation: preset.receive,
@@ -1173,7 +1172,6 @@ ${JSON.stringify(list, null, 2)}
         document.getElementById('editItemId').value        = item?.id ?? '';
         document.getElementById('editName').value          = item?.name ?? '';
         document.getElementById('editNameVi').value        = item?.nameVi ?? '';
-        document.getElementById('editCategory').value      = item?.category ?? '';
         document.getElementById('editStorageType').value   = item?.storageType ?? '冷凍';
         document.getElementById('editDisplayUnit').value   = item?.displayUnit ?? '包';
         document.getElementById('editBaseUnit').value      = item?.baseUnit ?? item?.displayUnit ?? '包';
@@ -1218,22 +1216,14 @@ ${JSON.stringify(list, null, 2)}
         document.getElementById('editReturnLoc').value  = preset.receive;
     };
 
-    window.onEnableThawChange = function() {
-        refreshThawVisibility();
-    };
-
-    window.onEnableReturnChange = function() {
-        refreshReturnVisibility();
-    };
-
-    function refreshThawVisibility() {
+    window.refreshThawVisibility = function refreshThawVisibility() {
         const enableThaw  = document.getElementById('enableThaw').checked;
         const issueSel    = document.getElementById('editIssueLoc');
         issueSel.disabled = !enableThaw;
         issueSel.style.opacity = enableThaw ? '' : '0.4';
     }
 
-    function refreshReturnVisibility() {
+    window.refreshReturnVisibility = function refreshReturnVisibility() {
         const enableReturn = document.getElementById('enableReturn').checked;
         const returnSel    = document.getElementById('editReturnLoc');
         returnSel.disabled = !enableReturn;
