@@ -156,7 +156,10 @@
     <div id="tab-items" class="tab-content active">
         <div class="section-header">
             <h2>品項管理</h2>
-            <button class="btn btn-primary btn-sm" onclick="openItemEditor()">＋ 新增品項</button>
+            <div style="display:flex;gap:8px;">
+                <button class="btn btn-outline btn-sm" onclick="exportItemsBackup()">⬇ 匯出備份</button>
+                <button class="btn btn-primary btn-sm" onclick="openItemEditor()">＋ 新增品項</button>
+            </div>
         </div>
         <div class="table-wrap">
             <table>
@@ -1032,7 +1035,7 @@ ${JSON.stringify(list, null, 2)}
                         primaryStation: r.primaryStation || 'pizzaStation',
                         notes: r.notes || '',
                         sortOrder: r.sortOrder ?? nextSort++,
-                        active: true,
+                        active: r.active !== false,
                         locations: {},
                     };
                     items.push(normalizeItem(patch, items.length));
@@ -1051,6 +1054,40 @@ ${JSON.stringify(list, null, 2)}
         document.getElementById('batchImportPreview').innerHTML = '';
         document.getElementById('confirmImportBtn').style.display = 'none';
         document.getElementById('cancelImportBtn').style.display = 'none';
+    };
+
+    window.exportItemsBackup = function() {
+        if (!inventoryData.length) { showToast('尚無品項可匯出'); return; }
+        const rows = [...inventoryData]
+            .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+            .map(item => {
+                const row = {
+                    name: item.name,
+                    category: item.category,
+                    displayUnit: item.displayUnit,
+                    baseUnit: item.baseUnit,
+                    basePerDisplay: item.basePerDisplay,
+                    storageType: item.storageType,
+                    thresholdDisplay: item.thresholdDisplay,
+                    enableThaw: item.enableThaw || false,
+                    enableReturn: item.enableReturn || false,
+                    primaryStation: item.primaryStation || 'pizzaStation',
+                    notes: item.notes || '',
+                    sortOrder: item.sortOrder,
+                    active: item.active !== false,
+                };
+                if (item.nameVi) row.nameVi = item.nameVi;
+                return row;
+            });
+        const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        const blob = new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `品項備份_${date}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast(`✅ 已匯出 ${rows.length} 筆品項`);
     };
 
     // ── Item Editor ───────────────────────────────────────
