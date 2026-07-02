@@ -418,7 +418,20 @@
                 <!-- 系統維護 -->
                 <div id="settings-maintenance" class="settings-section">
                     <h2>系統維護</h2>
-                    <div class="settings-card" style="max-width:400px;">
+                    <div class="settings-card" style="max-width:480px;margin-bottom:16px;">
+                        <h3>📋 明細日誌索引（首次設定）</h3>
+                        <p style="font-size:13px;color:#666;margin-bottom:14px;">首次使用「員工頁 → 品項明細」功能時，需在 Firebase 建立一次索引，之後永久有效。步驟如下：</p>
+                        <ol style="font-size:13px;color:#444;line-height:2;padding-left:18px;">
+                            <li>用 <strong>Chrome</strong> 打開員工頁</li>
+                            <li>按 <strong>F12</strong>（Mac 是 <code>Command + Option + J</code>），切到 <strong>Console</strong> 分頁</li>
+                            <li>點任意品項的「<strong>明細</strong>」按鈕</li>
+                            <li>Console 出現紅色錯誤，裡面有一個 <code>console.firebase.google.com/...</code> 連結，<strong>按住 Ctrl（Mac 是 Command）點它</strong></li>
+                            <li>Firebase 網頁打開後按「<strong>建立索引</strong>」</li>
+                            <li>等 2–3 分鐘，狀態變成 ✅ 就完成了</li>
+                        </ol>
+                        <p style="font-size:12px;color:#9aaba3;margin-top:10px;">⚠️ 如果沒有紅色錯誤出現，代表索引已經建好，不需要再做任何動作。</p>
+                    </div>
+                    <div class="settings-card" style="max-width:480px;">
                         <h3>操作記錄管理</h3>
                         <p style="font-size:13px;color:#666;margin-bottom:12px;">清理 6 個月前的操作記錄以釋放空間。清理後無法復原。</p>
                         <div id="logStatsDisplay" style="font-size:13px;color:#555;margin-bottom:12px;">（點擊查詢統計）</div>
