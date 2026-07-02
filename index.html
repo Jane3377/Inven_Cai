@@ -467,6 +467,7 @@ const firebaseConfig = {
             toast_synced: '已寫入並同步庫存', toast_no_change: '數量無變動，未寫入',
             toast_cleared: '✅ 紀錄已清除', toast_no_logs: '沒有紀錄可清除',
                 tx_error: '操作未完成（可能因其他裝置同時操作），請再試一次：',
+            lang_zh: '🇹🇼 中文', lang_vi: '🇻🇳 越南文',
         },
         vi: {
             tab_stock: 'Kho hàng', tab_count: '📋 Kiểm kê',
@@ -511,6 +512,7 @@ const firebaseConfig = {
             toast_synced: 'Đã ghi và đồng bộ kho hàng', toast_no_change: 'Số lượng không thay đổi, không ghi',
             toast_cleared: '✅ Đã xóa nhật ký', toast_no_logs: 'Không có nhật ký để xóa',
             tx_error: 'Thao tác chưa hoàn thành (có thể do thiết bị khác đồng thời), vui lòng thử lại：',
+            lang_zh: '🇹🇼 Tiếng Trung', lang_vi: '🇻🇳 Tiếng Việt',
         }
     };
     let currentLang = localStorage.getItem('inventoryLang') || 'zh';
@@ -543,6 +545,8 @@ const firebaseConfig = {
         set('lockCountBtn', t('lock_btn'));
         set('cancelFullCountBtn', t('cancel_btn'));
         set('finishFullCountBtn', t('finish_btn'));
+        set('langZh', t('lang_zh'));
+        set('langVi', t('lang_vi'));
         document.getElementById('langZh')?.classList.toggle('active', currentLang === 'zh');
         document.getElementById('langVi')?.classList.toggle('active', currentLang === 'vi');
     }
